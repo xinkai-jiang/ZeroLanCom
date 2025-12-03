@@ -4,7 +4,7 @@
 #include <thread>
 #include <vector>
 
-#include "lancom/lancom.hpp"
+#include "lancom.hpp"
 
 using namespace lancom;
 using namespace std::chrono_literals;
@@ -27,7 +27,7 @@ void start_node_task(const std::string& node_name, const IPAddress& node_ip) {
 
 int main() {
     std::vector<std::thread> node_threads;
-    std::vector<IPAddress> node_ips = {"127.0.0.1", "127.0.0.2", "127.0.0.3"};
+    std::vector<IPAddress> node_ips = {"127.0.0.1", "127.0.0.1", "127.0.0.1"};
     
     // Start nodes in separate threads
     for (size_t i = 0; i < node_ips.size(); ++i) {

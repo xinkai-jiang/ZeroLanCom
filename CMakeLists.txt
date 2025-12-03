@@ -1,107 +1,92 @@
-cmake_minimum_required(VERSION 3.16)
-project(lancom_cpp VERSION 1.0.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.14)
+project(LANCOM_CPP LANGUAGES CXX)
 
-# Set C++20 standard
-set(CMAKE_CXX_STANDARD 20)
+# ----------------------------
+# C++ Standard
+# ----------------------------
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Options
-option(LANCOM_BUILD_EXAMPLES "Build examples" ON)
-option(LANCOM_BUILD_TESTS "Build tests" ON)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
-# Find dependencies
-# Find libzmq package
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(ZMQ REQUIRED libzmq)
-# find_package(ZeroMQ REQUIRED)
-# find_package(cppzmq REQUIRED)
-find_package(msgpack-cxx REQUIRED)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# ----------------------------
+# Compile options
+# ----------------------------
+if (MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+
+# ----------------------------
+# External dependencies
+# ----------------------------
 find_package(spdlog REQUIRED)
 
-# Library sources
-set(LANCOM_SOURCES
-    src/config.cpp
-    src/lancom.cpp
-    src/log.cpp
-    src/nodes/abstract_node.cpp
-    src/nodes/lancom_node.cpp
-    src/nodes/silent_node.cpp
-    src/sockets/publisher.cpp
-    src/sockets/subscriber.cpp
-    src/sockets/service.cpp
-    src/sockets/service_proxy.cpp
-    src/sockets/streamer.cpp
-    src/utils/message_utils.cpp
-    src/utils/node_utils.cpp
+
+# ----------------------------
+# Include directory
+# ----------------------------
+include_directories(${PROJECT_SOURCE_DIR}/include)
+
+# ----------------------------
+# Source files
+# ----------------------------
+file(GLOB_RECURSE LANCOM_SOURCES
+    "${PROJECT_SOURCE_DIR}/src/*.cpp"
 )
 
-# Create the library
-add_library(lancom-cpp ${LANCOM_SOURCES})
-target_include_directories(lancom-cpp 
-    PUBLIC 
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
+# ----------------------------
+# Build the library
+# ----------------------------
+add_library(lancom ${LANCOM_SOURCES})
+
+target_include_directories(lancom PUBLIC
+    ${PROJECT_SOURCE_DIR}/include
 )
 
-# Link dependencies
-target_link_libraries(lancom-cpp 
-    PUBLIC 
-        libzmq-static
-        cppzmq
-        msgpackc
-        spdlog::spdlog
-)
+add_executable(main ${PROJECT_SOURCE_DIR}/src/lancom.cpp)
+target_include_directories(main PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(main PRIVATE spdlog::spdlog)
 
-# Compiler-specific settings
-if(MSVC)
-    target_compile_options(lancom-cpp PRIVATE /W4)
-else()
-    target_compile_options(lancom-cpp PRIVATE -Wall -Wextra -pedantic)
-endif()
+# # ----------------------------
+# # Examples (optional)
+# # ----------------------------
+# option(LANCOM_BUILD_EXAMPLES "Build LANCOM examples" ON)
+# if (LANCOM_BUILD_EXAMPLES)
+#     message(STATUS "Building examples...")
 
-# Install rules
-install(TARGETS lancom-cpp
-    EXPORT lancom-targets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include
-)
+#     file(GLOB EXAMPLE_SRCS "${PROJECT_SOURCE_DIR}/examples/*.cpp")
 
-install(DIRECTORY include/ DESTINATION include)
+#     foreach(example_file ${EXAMPLE_SRCS})
+#         get_filename_component(example_name ${example_file} NAME_WE)
 
-# Build examples if requested
-if(LANCOM_BUILD_EXAMPLES)
-    add_subdirectory(examples)
-endif()
+#         add_executable(${example_name} ${example_file})
+#         target_link_libraries(${example_name} PRIVATE lancom)
+#     endforeach()
+# endif()
 
-# Build tests if requested
-if(LANCOM_BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
+# # ----------------------------
+# # Tests (optional)
+# # ----------------------------
+# option(LANCOM_BUILD_TESTS "Build LANCOM tests" OFF)
+# if (LANCOM_BUILD_TESTS)
+#     enable_testing()
 
-# Export targets
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/lancom-cpp-config-version.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
+#     file(GLOB TEST_SRCS "${PROJECT_SOURCE_DIR}/tests/*.cpp")
 
-install(EXPORT lancom-targets
-    FILE lancom-cpp-targets.cmake
-    NAMESPACE lancom::
-    DESTINATION lib/cmake/lancom-cpp
-)
+#     foreach(test_file ${TEST_SRCS})
+#         get_filename_component(test_name ${test_file} NAME_WE)
 
-configure_file(cmake/lancom-cpp-config.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/lancom-cpp-config.cmake"
-    @ONLY
-)
+#         add_executable(${test_name} ${test_file})
+#         target_link_libraries(${test_name} PRIVATE lancom)
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/lancom-cpp-config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/lancom-cpp-config-version.cmake"
-    DESTINATION lib/cmake/lancom-cpp
-)
+#         add_test(NAME ${test_name} COMMAND ${test_name})
+#     endforeach()
+# endif()
