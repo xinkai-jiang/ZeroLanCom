@@ -14,7 +14,13 @@ namespace lancom {
 class LanComNode {
 public:
 
-static LanComNode& init(const std::string& name, const std::string& ip) {
+static LanComNode& init(
+    const std::string& name,
+     const std::string& ip,
+      const lancom::LogLevel log_level = lancom::LogLevel::INFO) 
+{
+    Logger::init(false);
+    Logger::setLevel(log_level);
     std::call_once(flag_, [&]() {
         instance_.reset(new LanComNode(name, ip));
     });

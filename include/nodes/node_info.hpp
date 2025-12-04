@@ -3,7 +3,7 @@
 #include <cstring>
 #include <cstdint>
 #include <arpa/inet.h>
-#include "utils/binary_codec.hpp"
+#include "serialization/binary_codec.hpp"
 #include "utils/message.hpp"
 #include "utils/logger.hpp"
 // =======================

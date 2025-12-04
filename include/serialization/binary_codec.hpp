@@ -14,7 +14,29 @@ struct ByteView {
 
     const uint8_t* begin() const { return data; }
     const uint8_t* end()   const { return data + size; }
+
 };
+
+struct ByteBuffer {
+    uint8_t* data = nullptr;
+    size_t size = 0;
+    size_t capacity = 0;
+
+    ~ByteBuffer() {
+        free(data);
+    }
+
+    void write(const char* buf, size_t len) {
+        if (size + len > capacity) {
+            size_t newcap = std::max(capacity * 2, size + len);
+            data = (uint8_t*)realloc(data, newcap);
+            capacity = newcap;
+        }
+        memcpy(data + size, buf, len);
+        size += len;
+    }
+};
+
 
 // =======================
 // Writer（for encode）

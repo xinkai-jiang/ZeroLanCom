@@ -9,7 +9,7 @@ void topicCallback(const std::string& msg) {
 
 std::string serviceHandler(const std::string& request) {
     LOG_INFO("Service request received.");
-    return request; // Echo the received request
+    return std::string("Echo: ") + request;
 }
 
 int main() {
@@ -22,7 +22,8 @@ int main() {
     lancom::LanComPublisher<std::string> publisher("TestTopic");
     node.registerServiceHandler("EchoService2", serviceHandler);
     lancom::LanComClient::waitForService("EchoService");
-    lancom::LanComClient::request<std::string, std::string>("EchoService", "Hello Service");
+    std::string response = "";
+    lancom::LanComClient::request<std::string, std::string>("EchoService", "Hello Service", response);
     try
     {
         while (true) {

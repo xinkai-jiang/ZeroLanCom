@@ -8,9 +8,9 @@
 #include <zmq.hpp>
 #include <fmt/format.h>
 #include "utils/logger.hpp"
-#include "utils/binary_codec.hpp"
 #include "utils/zmq_utils.hpp"
 #include "nodes/node_info_manager.hpp"
+#include "serialization/serializer.hpp"
 
 namespace lancom {
 
@@ -40,14 +40,8 @@ public:
         Subscriber sub;
         sub.topicName = topicName;
         sub.callback = [callback](const ByteView& view) {
-            // decode message
-            msgpack::object_handle oh = msgpack::unpack(
-                reinterpret_cast<const char*>(view.data),
-                view.size
-            );
             MessageType msg;
-            oh.get().convert(msg);
-            // call user callback
+            decode(view, msg);
             callback(msg);
         };
         sub.socket = std::make_unique<zmq::socket_t>(ZmqContext::instance(), zmq::socket_type::sub);

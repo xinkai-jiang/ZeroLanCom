@@ -5,10 +5,9 @@
 #include <unordered_map>
 #include <zmq.hpp>
 
-#include <msgpack.hpp>
-
 #include "utils/zmq_utils.hpp"
 #include "utils/logger.hpp"
+#include "serialization/serializer.hpp"
 
 namespace lancom {
 
@@ -37,9 +36,9 @@ public:
     
     // Publish methods for different types
     void publish(const T& msg) {
-        msgpack::sbuffer sbuf;
-        msgpack::pack(sbuf, msg);
-        socket_->send(zmq::buffer(sbuf.data(), sbuf.size()), zmq::send_flags::none);
+        ByteBuffer out;
+        encode(msg, out);
+        socket_->send(zmq::buffer(out.data, out.size), zmq::send_flags::none);
     };
     
     // Implement shutdown

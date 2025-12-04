@@ -8,12 +8,10 @@
 #include <thread>
 #include <string>
 #include <zmq.hpp>
-#include <msgpack.hpp>
 #include "utils/logger.hpp"
-#include "utils/binary_codec.hpp"
 #include "utils/zmq_utils.hpp"
 #include "utils/request_result.hpp"
-
+#include "serialization/serializer.hpp"
 
 namespace lancom {
 class ServiceManager {
@@ -45,100 +43,18 @@ public:
         }
     }
 
-    // template <typename ClassT, typename RequestType, typename ResponseType>
-    // void registerHandler(const std::string& name,
-    //                     ClassT* instance,
-    //                     ResponseType (ClassT::*method)(const RequestType&))
-    // {
-    //     handlers_[name] = [instance, method](const ByteView& payload)
-    //         -> std::vector<uint8_t>
-    //     {
-    //         // --------- Decode payload using msgpack ---------
-    //         msgpack::object_handle oh = msgpack::unpack(
-    //             reinterpret_cast<const char*>(payload.data),
-    //             payload.size
-    //         );
-
-    //         RequestType req = oh.get().as<RequestType>();
-
-    //         // --------- Invoke member function ---------
-    //         ResponseType resp = (instance->*method)(req);
-
-    //         // --------- Encode response using msgpack ---------
-    //         msgpack::sbuffer sbuf;
-    //         msgpack::pack(sbuf, resp);
-
-    //         // Convert sbuffer to std::vector<uint8_t>
-    //         return std::vector<uint8_t>(sbuf.data(), sbuf.data() + sbuf.size());
-    //     };
-    // }
-
-
-    // template <typename ClassT, typename ResponseType>
-    // void registerHandler(const std::string& name, ClassT* instance,
-    //                     ResponseType (ClassT::*method)()) {
-    //     handlers_[name] = [instance, method](const ByteView&) -> std::vector<uint8_t> {
-    //         ResponseType ret = (instance->*method)();
-    //         msgpack::sbuffer sbuf;
-    //         msgpack::pack(sbuf, ret);
-    //         return std::vector<uint8_t>(sbuf.data(), sbuf.data() + sbuf.size());
-    //     };
-    // }
-
-    // // method: void func(const RequestType&)
-    // template <typename ClassT, typename RequestType>
-    // void registerHandler(const std::string& name,
-    //                     ClassT* instance,
-    //                     void (ClassT::*method)(const RequestType&)) {
-
-    //     handlers_[name] = [instance, method](const ByteView& payload)
-    //         -> std::vector<uint8_t>
-    //     {
-    //         // Decode payload using msgpack
-    //         msgpack::object_handle oh = msgpack::unpack(
-    //             reinterpret_cast<const char*>(payload.data),
-    //             payload.size
-    //         );
-    //         RequestType arg = oh.get().as<RequestType>();
-    //         (instance->*method)(arg);
-    //         return {};
-    //     };
-    // }
-
-    // template <typename ClassT>
-    // void registerHandler(const std::string& name,
-    //                     ClassT* instance,
-    //                     void (ClassT::*method)()) {
-    //     handlers_[name] = [instance, method](const ByteView&) -> std::vector<uint8_t> {
-    //         (instance->*method)();
-    //         return {};
-    //     };
-    // }
-
-
     template <typename RequestType, typename ResponseType>
     void registerHandler(const std::string& name,
                         const std::function<ResponseType(const RequestType&)>& func)
     {
         handlers_[name] = [func](const ByteView& payload) -> std::vector<uint8_t>
         {
-            // --------- Decode payload using msgpack ---------
-            msgpack::object_handle oh = msgpack::unpack(
-                reinterpret_cast<const char*>(payload.data),
-                payload.size
-            );
-
-            RequestType req = oh.get().as<RequestType>();
-
-            // --------- Invoke member function ---------
+            RequestType req;
+            decode(payload, req);
             ResponseType resp = func(req);
-
-            // --------- Encode response using msgpack ---------
-            msgpack::sbuffer sbuf;
-            msgpack::pack(sbuf, resp);
-
-            // Convert sbuffer to std::vector<uint8_t>
-            return std::vector<uint8_t>(sbuf.data(), sbuf.data() + sbuf.size());
+            ByteBuffer out;
+            encode(resp, out);
+            return std::vector<uint8_t>(out.data, out.data + out.size);
         };
     }
 
@@ -146,8 +62,10 @@ public:
     void registerHandler(const std::string& name,
                         const std::function<void(const RequestType&)>& func)
     {
-        handlers_[name] = [func](const ByteView&) -> std::vector<uint8_t> {
-            func();
+        handlers_[name] = [func](const ByteView& payload) -> std::vector<uint8_t> {
+            RequestType req;
+            decode(payload, req);
+            func(req);
             return {};
         };
     }
@@ -158,9 +76,9 @@ public:
     {
         handlers_[name] = [func](const ByteView&) -> std::vector<uint8_t> {
             ResponseType ret = func();
-            msgpack::sbuffer sbuf;
-            msgpack::pack(sbuf, ret);
-            return std::vector<uint8_t>(sbuf.data(), sbuf.data() + sbuf.size());
+            ByteView out;
+            encode(ret, out);
+            return std::vector<uint8_t>(out.data, out.data + out.size);
         };
     }
 
