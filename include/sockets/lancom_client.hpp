@@ -65,7 +65,6 @@ public:
         if (payload_msg.more()) {
             LOG_ERROR("More message frames received than expected from service " + service_name);
         }
-        // Deserialize response using msgpack
         ByteView payload{
             static_cast<const uint8_t*>(payload_msg.data()),
             payload_msg.size()

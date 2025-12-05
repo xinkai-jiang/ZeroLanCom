@@ -4,7 +4,6 @@
 #include "nodes/multicast.hpp"
 #include "sockets/service_manager.hpp"
 #include "sockets/subscriber_manager.hpp"
-// #include "sockets/zmq_request_helper.hpp"
 #include <string>
 #include <thread>
 #include <chrono>

@@ -130,7 +130,7 @@ public:
             zmq::message_t service_name_msg;
             if (!res_socket_.recv(service_name_msg, zmq::recv_flags::none)) continue;
             LOG_TRACE("[ServiceManager] Received service request frame of size {} bytes.", service_name_msg.size());
-            std::string service_name = decode(ByteView{
+            std::string service_name = decodeServiceHeader(ByteView{
                 static_cast<const uint8_t*>(service_name_msg.data()),
                 service_name_msg.size()
             });

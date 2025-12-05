@@ -39,7 +39,7 @@ struct ByteBuffer {
 
 
 // =======================
-// Writer（for encode）
+// Writer（for encode NodeInfo）
 // =======================
 
 struct BinWriter {
@@ -70,7 +70,7 @@ struct BinWriter {
 };
 
 // =======================
-// Reader（for decode）
+// Reader（for decode NodeInfo）
 // Zero-copy
 // =======================
 
@@ -110,7 +110,7 @@ struct BinReader {
     }
 };
 
-std::string decode(ByteView payload) {
+std::string decodeServiceHeader(ByteView payload) {
     constexpr size_t kMaxLen = 1024;
 
     if (!payload.data || payload.size == 0)
