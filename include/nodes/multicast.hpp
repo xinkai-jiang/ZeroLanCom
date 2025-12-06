@@ -74,6 +74,7 @@ public:
 
         int reuse = 1;
         setsockopt(sock_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+        setsockopt(sock_, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
 
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
