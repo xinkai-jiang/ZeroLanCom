@@ -53,7 +53,7 @@ public:
             multicastSendThread.join();
         }
     }
-    
+
 private:
     
     std::thread multicastSendThread;
@@ -102,14 +102,14 @@ public:
             socklen_t slen = sizeof(src);
             // LOG_INFO("Multicast receiver started.");
             while (running_) {
-                int n = recvfrom(sock_, buf.data(), (int)buf.size(), 0,
-                                (sockaddr*)&src, &slen);           
+                int n = recvfrom(sock_, buf.data(), (int)buf.size(), 0, (sockaddr*)&src, &slen);      
                 if (n <= 0) continue;
                 std::string ip = inet_ntoa(src.sin_addr);
                 NodeInfo info = NodeInfo::decode(ByteView{buf.data(), (size_t)n});
                 info.ip = ip;
                 LOG_TRACE("Received multicast heartbeat from node {} at IP {}", info.nodeID, ip);
                 nodeManager.processHeartbeat(info);
+                nodeManager.checkHeartbeats();
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             LOG_INFO("Multicast receiver stopped.");

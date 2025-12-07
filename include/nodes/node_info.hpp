@@ -30,15 +30,6 @@ struct SocketInfo {
         return si;
     }
 
-    // void createHeartbeat(std::vector<uint8_t>& buf) const {
-    //     uint8_t* p = buf.data();
-    //     uint16_t name_len = htons((uint16_t)name.size());
-    //     memcpy(p, &name_len, 2); p += 2;
-    //     memcpy(p, name.data(), name.size()); p += name.size();
-    //     uint16_t port_net = htons(port);
-    //     memcpy(p, &port_net, 2);
-    // }
-
 };
 
 // =======================
