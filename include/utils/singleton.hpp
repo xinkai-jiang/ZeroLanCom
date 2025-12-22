@@ -1,0 +1,42 @@
+#pragma once
+
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <utility>
+
+template <typename T>
+class Singleton {
+public:
+    Singleton(const Singleton&) = delete;
+    Singleton& operator=(const Singleton&) = delete;
+    Singleton(Singleton&&) = delete;
+    Singleton& operator=(Singleton&&) = delete;
+
+    // template <typename... Args>
+    // static T& init(Args&&... args) {
+    //     std::lock_guard<std::mutex> lock(mutex_);
+    //     if (instance_) {
+    //         throw std::logic_error("Singleton already initialized");
+    //     }
+    //     instance_.reset(new T(std::forward<Args>(args)...));
+    //     return *instance_;
+    // }
+
+    static T& instance() {
+        if (!instance_) {
+            throw std::logic_error("Singleton not initialized. Call init() first.");
+        }
+        return *instance_;
+    }
+
+    static bool isInitialized() {
+        return instance_ != nullptr;
+    }
+
+protected:
+    Singleton() = default;
+    ~Singleton() = default;
+    inline static std::unique_ptr<T> instance_ = nullptr;
+    inline static std::mutex mutex_;
+};

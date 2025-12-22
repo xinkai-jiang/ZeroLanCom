@@ -1,5 +1,5 @@
 #include <msgpack.hpp>
-#include "zerolancom_node.hpp"
+#include "zerolancom.hpp"
 #include "utils/logger.hpp"
 #include "sockets/publisher.hpp"
 #include "sockets/client.hpp"
@@ -20,7 +20,7 @@ int main() {
     //initialize logger
     zlc::Logger::init(false); //true to enable file logging
     zlc::Logger::setLevel(zlc::LogLevel::INFO);
-    zlc::ZeroLanComNode& node = zlc::ZeroLanComNode::init("CustomMessageNode", "127.0.0.1");
+    zlc::init("CustomMessageNode", "127.0.0.1");
     zlc::Publisher<CustomMessage> publisher("CustomMessage");
     try
     {
@@ -29,7 +29,7 @@ int main() {
             publisher.publish(CustomMessage{counter, "CustomMessage", {1.0f, 2.0f, 3.0f}});
             counter++;
             LOG_INFO("Published message to CustomMessage");
-            node.sleep(1000);
+            zlc::sleep(1000);
         }
     }   
     catch(const std::exception& e)

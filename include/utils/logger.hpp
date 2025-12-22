@@ -92,6 +92,51 @@ private:
     }
 };
 
+void trace(const std::string& msg) {
+    spdlog::trace(msg);
+}
+
+void info(const std::string& msg) {
+    spdlog::info(msg);
+}
+
+void warn(const std::string& msg) {
+    spdlog::warn(msg);
+}
+
+void error(const std::string& msg) {
+    spdlog::error(msg);
+}
+
+void fatal(const std::string& msg) {
+    spdlog::critical(msg);
+}
+
+template <typename... Args>
+inline void trace(fmt::format_string<Args...> fmt, Args&&... args) {
+    spdlog::trace(fmt, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+inline void info(fmt::format_string<Args...> fmt, Args&&... args) {
+    spdlog::info(fmt, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+inline void warn(fmt::format_string<Args...> fmt, Args&&... args) {
+    spdlog::warn(fmt, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+inline void error(fmt::format_string<Args...> fmt, Args&&... args) {
+    spdlog::error(fmt, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+inline void fatal(fmt::format_string<Args...> fmt, Args&&... args) {
+    spdlog::critical(fmt, std::forward<Args>(args)...);
+}
+
 } // namespace utils
 
 // Logging macros using async logger (supports {} format)

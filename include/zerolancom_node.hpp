@@ -7,34 +7,26 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include "utils/singleton.hpp"
 
 namespace zlc {
 
-class ZeroLanComNode {
+class ZeroLanComNode : public Singleton<ZeroLanComNode> {
 public:
 
-static ZeroLanComNode& init(
+static void init(
     const std::string& name,
      const std::string& ip,
       const zlc::LogLevel log_level = zlc::LogLevel::INFO) 
 {
     Logger::init(false);
     Logger::setLevel(log_level);
-    std::call_once(flag_, [&]() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (instance_) {
+            throw std::logic_error("Singleton already initialized");
+        }
         instance_.reset(new ZeroLanComNode(name, ip));
-    });
-    return *instance_;
 }
-
-static ZeroLanComNode& instance() {
-    if (!instance_) {
-        throw std::runtime_error("ZeroLanComNode not initialized!");
-    }
-    return *instance_;
-}
-
-ZeroLanComNode(const ZeroLanComNode&) = delete;
-ZeroLanComNode& operator=(const ZeroLanComNode&) = delete;
 
 ZeroLanComNode(const std::string& name,
     const std::string& ip,
@@ -98,9 +90,7 @@ ZeroLanComNode(const std::string& name,
                 name, serviceManager.service_port_);
     }
 
-    void registerTopic(
-        const std::string& topic_name,
-        int port)
+    void registerTopic(const std::string& topic_name, int port)
     {
         localInfo.registerTopic(topic_name, static_cast<uint16_t>(port));
         LOG_INFO("Topic {} registered at port {}", topic_name, port);
@@ -109,9 +99,9 @@ ZeroLanComNode(const std::string& name,
     template <typename MessageType>
     void registerSubscriber(
         const std::string& topic_name,
-        std::function<void(const MessageType&)> callback)
+        void(*callback)(const MessageType&))
     {
-        subscriberManager.registerTopicSubscriber<MessageType>(topic_name, callback);
+        subscriberManager.registerTopicSubscriber<MessageType>(topic_name, std::function(callback));
     }
 
 
@@ -131,9 +121,6 @@ ZeroLanComNode(const std::string& name,
     
     bool running = true;
     int startZmqServicePort() { return 7000; }
-
-    static inline std::unique_ptr<ZeroLanComNode> instance_;
-    static inline std::once_flag flag_;
 
 };
 

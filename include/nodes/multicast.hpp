@@ -40,9 +40,8 @@ public:
             // LOG_INFO("Multicast sender started.");
             while (running_) {
                 auto msg = localInfo.createHeartbeat();
-                send(msg);
+                sendHeartbeat(msg);
                 std::this_thread::sleep_for(std::chrono::seconds(1));
-                LOG_TRACE("Sent multicast heartbeat from node {}", localInfo.nodeID);
             }
         });
     }
@@ -58,7 +57,7 @@ private:
     
     std::thread multicastSendThread;
     std::atomic<bool> running_;
-    void send(const std::vector<uint8_t>& msg) {
+    void sendHeartbeat(const std::vector<uint8_t>& msg) {
         sendto(sock, msg.data(), msg.size(), 0,
                (sockaddr*)&addr, sizeof(addr));
     }
@@ -107,7 +106,6 @@ public:
                 std::string ip = inet_ntoa(src.sin_addr);
                 NodeInfo info = NodeInfo::decode(ByteView{buf.data(), (size_t)n});
                 info.ip = ip;
-                LOG_TRACE("Received multicast heartbeat from node {} at IP {}", info.nodeID, ip);
                 nodeManager.processHeartbeat(info);
                 nodeManager.checkHeartbeats();
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
