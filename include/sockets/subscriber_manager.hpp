@@ -9,7 +9,6 @@
 #include <fmt/format.h>
 #include "utils/logger.hpp"
 #include "utils/zmq_utils.hpp"
-#include "nodes/node_info_manager.hpp"
 #include "serialization/serializer.hpp"
 
 namespace zlc {

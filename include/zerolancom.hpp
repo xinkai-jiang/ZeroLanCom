@@ -1,9 +1,8 @@
 #pragma once
 
 // Core headers
-#include "zerolancom_node.hpp"
-#include "sockets/client.hpp"
 #include "utils/logger.hpp"
+#include "sockets/client.hpp"
 #include "sockets/publisher.hpp"
 
 // dependent library headers

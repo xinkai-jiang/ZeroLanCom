@@ -1,12 +1,12 @@
 #pragma once
+#include <string>
+#include <chrono>
+#include <thread>
 #include "nodes/node_info_manager.hpp"
 #include "nodes/node_info.hpp"
 #include "nodes/multicast.hpp"
 #include "sockets/service_manager.hpp"
 #include "sockets/subscriber_manager.hpp"
-#include <string>
-#include <thread>
-#include <chrono>
 #include "utils/singleton.hpp"
 
 namespace zlc {
@@ -107,8 +107,6 @@ ZeroLanComNode(const std::string& name,
     SubscriberManager subscriberManager;
     
     bool running = true;
-    int startZmqServicePort() { return 7000; }
-
 };
 
 } // namespace zlc

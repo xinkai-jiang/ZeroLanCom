@@ -6,7 +6,6 @@
 #include <string>
 
 #include "utils/logger.hpp"
-#include "serialization/msppack_codec.hpp"
 #include "serialization/serializer.hpp"
 #include "zerolancom_node.hpp"
 

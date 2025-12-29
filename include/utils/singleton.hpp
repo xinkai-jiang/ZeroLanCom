@@ -13,16 +13,6 @@ public:
     Singleton(Singleton&&) = delete;
     Singleton& operator=(Singleton&&) = delete;
 
-    // template <typename... Args>
-    // static T& init(Args&&... args) {
-    //     std::lock_guard<std::mutex> lock(mutex_);
-    //     if (instance_) {
-    //         throw std::logic_error("Singleton already initialized");
-    //     }
-    //     instance_.reset(new T(std::forward<Args>(args)...));
-    //     return *instance_;
-    // }
-
     static T& instance() {
         if (!instance_) {
             throw std::logic_error("Singleton not initialized. Call init() first.");

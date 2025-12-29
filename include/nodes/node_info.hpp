@@ -3,12 +3,10 @@
 #include <cstring>
 #include <cstdint>
 #include <arpa/inet.h>
-#include "serialization/binary_codec.hpp"
+#include <chrono>
+#include "serialization/serializer.hpp"
 #include "utils/message.hpp"
 #include "utils/logger.hpp"
-// =======================
-// SocketInfo
-// =======================
 
 namespace zlc {
 
@@ -104,6 +102,7 @@ struct NodeInfo {
 struct LocalNodeInfo {
     std::string nodeID;
     NodeInfo nodeInfo;
+    mutable std::mutex mutex_;
 
     LocalNodeInfo(const std::string& name, const std::string& ip)
     {
@@ -115,15 +114,18 @@ struct LocalNodeInfo {
     }
 
     std::vector<uint8_t> createHeartbeat() const {
+        std::lock_guard<std::mutex> lock(mutex_);
         return nodeInfo.encode();
     }
 
     void registerTopic(const std::string& name, uint16_t port) {
+        std::lock_guard<std::mutex> lock(mutex_);
         nodeInfo.topics.push_back(SocketInfo{name, nodeInfo.ip, port});
         nodeInfo.infoID++;
     }
 
     void registerServices(const std::string& name, uint16_t port) {
+        std::lock_guard<std::mutex> lock(mutex_);
         nodeInfo.services.push_back(SocketInfo{name, nodeInfo.ip, port});
         nodeInfo.infoID++;
     }
