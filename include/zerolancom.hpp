@@ -20,7 +20,12 @@ void init(const std::string& node_name, const std::string& ip_address)
 template <typename HandlerT>
 void registerServiceHandler(const std::string& service_name, HandlerT handler)
 {
-    zlc::ZeroLanComNode::instance().registerServiceHandler(service_name, handler);
+    auto & node = zlc::ZeroLanComNode::instance();
+    auto & localInfo = node.localInfo;
+    auto & serviceManager = node.serviceManager;
+    serviceManager.registerHandler(service_name, std::function(handler));
+    localInfo.registerServices(service_name, serviceManager.service_port);
+    zlc::info("Service {} registered at port {}", service_name, serviceManager.service_port);
 }
 
 template <typename HandlerT, typename ClassT>
@@ -29,23 +34,30 @@ void registerServiceHandler(
     HandlerT handler,
     ClassT* instance)
 {
-    zlc::ZeroLanComNode::instance().registerServiceHandler(service_name, handler, instance);
+    auto & node = zlc::ZeroLanComNode::instance();
+    auto & localInfo = node.localInfo;
+    auto & serviceManager = node.serviceManager;
+    serviceManager.registerHandler(service_name, std::bind(handler, instance));
+    localInfo.registerServices(service_name, serviceManager.service_port);
 }
 
-template <typename HandlerT>
-void registerSubscriberHandler(const std::string& name, HandlerT handler)
+template <typename MessageType>
+void registerSubscriberHandler(const std::string& name, void(*callback)(const MessageType&))
 {
-    zlc::ZeroLanComNode::instance().registerSubscriber(name, handler);
+    auto& SubscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
+    SubscriberManager.registerTopicSubscriber(name, std::function(callback));
 }
 
-template <typename HandlerT, typename ClassT>
-void registerSubscriberHandler(
-    const std::string& service_name,
-    HandlerT handler,
-    ClassT* instance)
-{
-    zlc::ZeroLanComNode::instance().registerSubscriber(service_name, handler, instance);
-}
+// template <typename HandlerT, typename ClassT>
+// void registerSubscriberHandler(
+//     const std::string& service_name,
+//     HandlerT handler,
+//     ClassT* instance)
+// {
+//     auto& SubscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
+//     SubscriberManager.registerTopicSubscriber(service_name,
+//         std::bind(handler, instance, std::placeholders::_1));
+// }
 
 void sleep(int ms)
 {

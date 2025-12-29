@@ -54,39 +54,11 @@ ZeroLanComNode(const std::string& name,
         mcastReceiver.stop();
     }
 
-    template <typename HandlerT>
-    void registerServiceHandler(const std::string& name, HandlerT handler)
-    {
-        serviceManager.registerHandler(name, std::function(handler));
-        localInfo.registerServices(name, serviceManager.service_port_);
-
-        LOG_INFO("Service {} registered at port {}", name, serviceManager.service_port_);
-    }
-
-    template <typename HandlerT, typename ClassT>
-    void registerServiceHandler(const std::string& name, HandlerT handler, ClassT* instance)
-    {
-        serviceManager.registerHandler(name, std::bind(handler, instance));
-        localInfo.registerServices(name, serviceManager.service_port_);
-
-        LOG_INFO("Service {} registered at port {}",
-                name, serviceManager.service_port_);
-    }
-
     void registerTopic(const std::string& topic_name, int port)
     {
         localInfo.registerTopic(topic_name, static_cast<uint16_t>(port));
         LOG_INFO("Topic {} registered at port {}", topic_name, port);
     }
-
-    template <typename MessageType>
-    void registerSubscriber(
-        const std::string& topic_name,
-        void(*callback)(const MessageType&))
-    {
-        subscriberManager.registerTopicSubscriber<MessageType>(topic_name, std::function(callback));
-    }
-
 
     const std::string& GetIP() const {
         return localInfo.nodeInfo.ip;
@@ -97,16 +69,15 @@ ZeroLanComNode(const std::string& name,
         return running;
     }
 
-
-    private:
     LocalNodeInfo localInfo;
-    
-    MulticastSender mcastSender;
-    MulticastReceiver mcastReceiver;
     ServiceManager serviceManager;
     SubscriberManager subscriberManager;
-    
-    bool running = true;
+
+private:
+MulticastSender mcastSender;
+MulticastReceiver mcastReceiver;
+
+bool running = true;
 };
 
 } // namespace zlc

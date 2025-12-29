@@ -47,22 +47,22 @@ public:
         // Receive response
         zmq::message_t service_name_msg;
         if (!req_socket.recv(service_name_msg, zmq::recv_flags::none)) {
-            LOG_ERROR("Timeout waiting for response from service " + service_name);
+            zlc::error("Timeout waiting for response from service " + service_name);
             return;
         }
         LOG_TRACE("[Client] Received service name frame of size {} bytes.", service_name_msg.size());
         if (!service_name_msg.more()) {
-            LOG_ERROR("No payload frame received for service response from " + service_name);
+            zlc::error("No payload frame received for service response from " + service_name);
             return;
         }
         zmq::message_t payload_msg;
         if (!req_socket.recv(payload_msg, zmq::recv_flags::none)) {
-            LOG_ERROR("Timeout waiting for payload from service " + service_name);
+            zlc::error("Timeout waiting for payload from service " + service_name);
             return;
         }
         LOG_TRACE("[Client] Received payload frame of size {} bytes.", payload_msg.size());
         if (payload_msg.more()) {
-            LOG_ERROR("More message frames received than expected from service " + service_name);
+            zlc::error("More message frames received than expected from service " + service_name);
         }
         ByteView payload{
             static_cast<const uint8_t*>(payload_msg.data()),
@@ -90,7 +90,4 @@ public:
             }
         }
 };
-
-// Template implementation
-
 } // namespace zlc
