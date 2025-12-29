@@ -1,4 +1,4 @@
-#include "nodes/zerolancom_node.hpp"
+#include "zerolancom/nodes/zerolancom_node.hpp"
 
 #include <stdexcept>
 

@@ -4,12 +4,11 @@
 #include <string>
 
 // Core headers
-#include "nodes/node_info.hpp"
-#include "nodes/zerolancom_node.hpp"
-#include "sockets/client.hpp"
-#include "sockets/publisher.hpp"
-#include "utils/logger.hpp"
-#include "utils/request_result.hpp"
+// #include "zerolancom/nodes/zerolancom_node.hpp"
+// #include "zerolancom/nodes/node_info.hpp"
+#include "zerolancom/sockets/client.hpp"
+#include "zerolancom/sockets/publisher.hpp"
+#include "zerolancom/utils/logger.hpp"
 
 namespace zlc
 {

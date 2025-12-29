@@ -1,4 +1,4 @@
-#include "sockets/subscriber_manager.hpp"
+#include "zerolancom/sockets/subscriber_manager.hpp"
 
 namespace zlc
 {

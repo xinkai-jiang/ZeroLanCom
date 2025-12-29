@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "serialization/serializer.hpp"
-#include "utils/message.hpp"
+#include "zerolancom/serialization/serializer.hpp"
+#include "zerolancom/utils/message.hpp"
 
 namespace zlc
 {

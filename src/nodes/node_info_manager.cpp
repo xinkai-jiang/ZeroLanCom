@@ -1,8 +1,8 @@
-#include "nodes/node_info_manager.hpp"
+#include "zerolancom/nodes/node_info_manager.hpp"
 
 #include <iostream>
 
-#include "utils/logger.hpp"
+#include "zerolancom/utils/logger.hpp"
 
 namespace zlc
 {

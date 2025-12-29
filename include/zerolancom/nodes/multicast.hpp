@@ -7,8 +7,8 @@
 #include <thread>
 #include <vector>
 
-#include "nodes/node_info.hpp"
-#include "nodes/node_info_manager.hpp"
+#include "zerolancom/nodes/node_info.hpp"
+#include "zerolancom/nodes/node_info_manager.hpp"
 
 namespace zlc
 {

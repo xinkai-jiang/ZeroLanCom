@@ -1,4 +1,4 @@
-#include "sockets/client.hpp"
+#include "zerolancom/sockets/client.hpp"
 
 #include <chrono>
 #include <thread>

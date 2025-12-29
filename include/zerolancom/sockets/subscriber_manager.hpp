@@ -10,11 +10,11 @@
 #include <fmt/format.h>
 #include <zmq.hpp>
 
-#include "nodes/node_info.hpp"
-#include "nodes/node_info_manager.hpp"
-#include "serialization/serializer.hpp"
-#include "utils/logger.hpp"
-#include "utils/zmq_utils.hpp"
+#include "zerolancom/nodes/node_info.hpp"
+#include "zerolancom/nodes/node_info_manager.hpp"
+#include "zerolancom/serialization/serializer.hpp"
+#include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/zmq_utils.hpp"
 
 namespace zlc
 {

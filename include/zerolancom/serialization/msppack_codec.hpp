@@ -1,5 +1,5 @@
 #pragma once
-#include "serialization/binary_codec.hpp"
+#include "zerolancom/serialization/binary_codec.hpp"
 #include <msgpack.hpp>
 
 // TODO: pretect for encode and decode failure cases using try-catch

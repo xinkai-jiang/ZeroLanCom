@@ -25,11 +25,6 @@ pkg_check_modules(ZMQ REQUIRED libzmq)
 # find_package(msgpack-cpp REQUIRED)
 
 # ----------------------------
-# Include directory
-# ----------------------------
-include_directories(${PROJECT_SOURCE_DIR}/include)
-
-# ----------------------------
 # Source files
 # ----------------------------
 file(GLOB_RECURSE ZEROLANCOM_SOURCES
@@ -40,38 +35,61 @@ file(GLOB_RECURSE ZEROLANCOM_SOURCES
 # Build C++ core library
 # ----------------------------
 add_library(zerolancom SHARED ${ZEROLANCOM_SOURCES})
-# target_include_directories(zerolancom INTERFACE
-#     ${PROJECT_SOURCE_DIR}/include
-# )
-target_include_directories(zerolancom PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(zerolancom
+    PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
 
 # ----------------------------
 # Install library
 # ----------------------------
+include(GNUInstallDirs)
+
 install(TARGETS zerolancom
-        EXPORT zerolancomTargets)
+    EXPORT zerolancomTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
-# Install header files
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
-        DESTINATION include/zerolancom)
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
-# Export CMake targets to be findable
 install(EXPORT zerolancomTargets
-        FILE zerolancomTargets.cmake
-        NAMESPACE zlc::
-        DESTINATION lib/cmake/zerolancom)
+    FILE zerolancomTargets.cmake
+    NAMESPACE ZeroLanCom::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ZeroLanCom
+)
 
+
+# ----------------------------
+# Create and install config files
+# ----------------------------
 include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/zerolancomConfig.cmake.in
+    ${PROJECT_SOURCE_DIR}/cmake/zerolancomConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/zerolancomConfig.cmake
-    INSTALL_DESTINATION lib/cmake/zerolancom
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ZeroLanCom
 )
 
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/zerolancomConfig.cmake
-    DESTINATION lib/cmake/zerolancom
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ZeroLanCom
+)
+
+export(EXPORT zerolancomTargets
+    FILE ${CMAKE_CURRENT_BINARY_DIR}/zerolancomTargets.cmake
+    NAMESPACE ZeroLanCom::
+)
+
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/zerolancomConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/zerolancomConfig.cmake
+    @ONLY
 )
 
 # ----------------------------

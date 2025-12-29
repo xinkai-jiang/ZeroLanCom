@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "nodes/node_info.hpp"
+#include "zerolancom/nodes/node_info.hpp"
 
 namespace zlc
 {

@@ -9,10 +9,10 @@
 
 #include <zmq.hpp>
 
-#include "serialization/serializer.hpp"
-#include "utils/logger.hpp"
-#include "utils/request_result.hpp"
-#include "utils/zmq_utils.hpp"
+#include "zerolancom/serialization/serializer.hpp"
+#include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/request_result.hpp"
+#include "zerolancom/utils/zmq_utils.hpp"
 
 namespace zlc
 {

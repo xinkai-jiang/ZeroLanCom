@@ -1,10 +1,10 @@
-#include "nodes/multicast.hpp"
+#include "zerolancom/nodes/multicast.hpp"
 
 #include <arpa/inet.h>
 #include <chrono>
 #include <unistd.h>
 
-#include "utils/logger.hpp"
+#include "zerolancom/utils/logger.hpp"
 
 namespace zlc
 {

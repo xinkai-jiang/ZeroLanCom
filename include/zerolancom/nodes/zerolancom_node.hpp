@@ -3,14 +3,14 @@
 #include <mutex>
 #include <string>
 
-#include "utils/logger.hpp"
-#include "utils/singleton.hpp"
+#include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/singleton.hpp"
 
-#include "nodes/multicast.hpp"
-#include "nodes/node_info.hpp"
-#include "nodes/node_info_manager.hpp"
-#include "sockets/service_manager.hpp"
-#include "sockets/subscriber_manager.hpp"
+#include "zerolancom/nodes/multicast.hpp"
+#include "zerolancom/nodes/node_info.hpp"
+#include "zerolancom/nodes/node_info_manager.hpp"
+#include "zerolancom/sockets/service_manager.hpp"
+#include "zerolancom/sockets/subscriber_manager.hpp"
 
 namespace zlc
 {
