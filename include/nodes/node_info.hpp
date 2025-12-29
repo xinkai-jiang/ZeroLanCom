@@ -1,133 +1,57 @@
 #pragma once
-#include <vector>
-#include <cstring>
+
 #include <cstdint>
-#include <arpa/inet.h>
-#include <chrono>
+#include <mutex>
+#include <string>
+#include <vector>
+
 #include "serialization/serializer.hpp"
 #include "utils/message.hpp"
-#include "utils/logger.hpp"
 
-namespace zlc {
+namespace zlc
+{
 
-struct SocketInfo {
-    std::string name;
-    std::string ip;
-    uint16_t port;
+/* ================= SocketInfo ================= */
 
-    void encode(BinWriter& w) const {
-        w.write_string(name);
-        w.write_u16(port);
-    }
+struct SocketInfo
+{
+  std::string name;
+  std::string ip;
+  uint16_t port;
 
-    static SocketInfo decode(BinReader& r, const std::string& ip) {
-        SocketInfo si;
-        si.name = r.read_string();
-        si.ip = ip;
-        si.port = r.read_u16();
-        return si;
-    }
-
+  void encode(BinWriter &w) const;
+  static SocketInfo decode(BinReader &r, const std::string &ip);
 };
 
-// =======================
-// NodeInfo
-// =======================
+/* ================= NodeInfo ================= */
 
-struct NodeInfo {
-    std::string nodeID;     // 36-char UUID
-    uint32_t infoID;
-    std::string name;
-    std::string ip;
-    std::vector<SocketInfo> topics;
-    std::vector<SocketInfo> services;
+struct NodeInfo
+{
+  std::string nodeID; // 36-char UUID
+  uint32_t infoID;
+  std::string name;
+  std::string ip;
+  std::vector<SocketInfo> topics;
+  std::vector<SocketInfo> services;
 
-    std::vector<uint8_t> encode() const {
-        BinWriter w;
-
-        w.write_fixed_string(nodeID, 36);
-        w.write_u32(infoID);
-        w.write_string(name);
-        w.write_string(ip);
-
-        w.write_u16(topics.size());
-        for (auto& t : topics) t.encode(w);
-
-        w.write_u16(services.size());
-        for (auto& s : services) s.encode(w);
-
-        return std::move(w.buf);
-    }
-
-    static NodeInfo decode(ByteView bv) {
-        BinReader r{bv};
-        NodeInfo ni;
-
-        ni.nodeID = r.read_fixed_string(36);
-        ni.infoID = r.read_u32();
-        ni.name   = r.read_string();
-        ni.ip     = r.read_string();
-
-        uint16_t topics_count = r.read_u16();
-        ni.topics.reserve(topics_count);
-        for (int i = 0; i < topics_count; i++)
-            ni.topics.push_back(SocketInfo::decode(r, ni.ip));
-
-        uint16_t srv_count = r.read_u16();
-        ni.services.reserve(srv_count);
-        for (int i = 0; i < srv_count; i++)
-            ni.services.push_back(SocketInfo::decode(r, ni.ip));
-
-        return ni;
-    }
-
-    void printNodeInfo() const {
-        LOG_INFO("-------------------------------------------------------------");
-        LOG_INFO("NodeID: {}", nodeID);
-        LOG_INFO("InfoID: {}", infoID);
-        LOG_INFO("Name: {}", name);
-        LOG_INFO("IP: {}", ip);
-        LOG_INFO("Topics:");
-        for (const auto& t : topics) {
-            LOG_INFO("  - {}:{}", t.name, t.port);
-        }
-        LOG_INFO("Services:");
-        for (const auto& s : services) {
-            LOG_INFO("  - {}:{}", s.name, s.port);
-        }
-    }
-
+  std::vector<uint8_t> encode() const;
+  static NodeInfo decode(ByteView bv);
+  void printNodeInfo() const;
 };
 
-struct LocalNodeInfo {
-    std::string nodeID;
-    NodeInfo nodeInfo;
-    mutable std::mutex mutex_;
+/* ================= LocalNodeInfo ================= */
 
-    LocalNodeInfo(const std::string& name, const std::string& ip)
-    {
-        nodeID = generateUUID();
-        nodeInfo.nodeID = nodeID;
-        nodeInfo.infoID = 0;
-        nodeInfo.name = name;
-        nodeInfo.ip = ip;
-    }
+struct LocalNodeInfo
+{
+  std::string nodeID;
+  NodeInfo nodeInfo;
+  mutable std::mutex mutex_;
 
-    std::vector<uint8_t> createHeartbeat() const {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return nodeInfo.encode();
-    }
+  LocalNodeInfo(const std::string &name, const std::string &ip);
 
-    void registerTopic(const std::string& name, uint16_t port) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        nodeInfo.topics.push_back(SocketInfo{name, nodeInfo.ip, port});
-        nodeInfo.infoID++;
-    }
-
-    void registerServices(const std::string& name, uint16_t port) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        nodeInfo.services.push_back(SocketInfo{name, nodeInfo.ip, port});
-        nodeInfo.infoID++;
-    }
+  std::vector<uint8_t> createHeartbeat() const;
+  void registerTopic(const std::string &name, uint16_t port);
+  void registerServices(const std::string &name, uint16_t port);
 };
-}
+
+} // namespace zlc

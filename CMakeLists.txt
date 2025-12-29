@@ -32,27 +32,18 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 # ----------------------------
 # Source files
 # ----------------------------
-# file(GLOB_RECURSE ZEROLANCOM_SOURCES
-#     "${PROJECT_SOURCE_DIR}/src/*.cpp"
-# )
+file(GLOB_RECURSE ZEROLANCOM_SOURCES
+    "${PROJECT_SOURCE_DIR}/src/*.cpp"
+)
 
 # ----------------------------
 # Build C++ core library
 # ----------------------------
-add_library(zerolancom INTERFACE)
+add_library(zerolancom SHARED ${ZEROLANCOM_SOURCES})
 # target_include_directories(zerolancom INTERFACE
 #     ${PROJECT_SOURCE_DIR}/include
 # )
-target_include_directories(zerolancom INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
-target_link_libraries(zerolancom INTERFACE
-    PkgConfig::ZMQ
-    spdlog::spdlog
-    msgpackc
-)
+target_include_directories(zerolancom PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 # ----------------------------
 # Install library

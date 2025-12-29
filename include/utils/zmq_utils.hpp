@@ -1,25 +1,29 @@
 #pragma once
-#include <zmq.hpp>
 #include <string>
+#include <zmq.hpp>
 
-class ZmqContext {
+class ZmqContext
+{
 public:
-    static zmq::context_t& instance() {
-        static zmq::context_t ctx{1};
-        return ctx;
-    }
+  static zmq::context_t &instance()
+  {
+    static zmq::context_t ctx{1};
+    return ctx;
+  }
 
-    ZmqContext() = delete;
+  ZmqContext() = delete;
 };
 
-int getBoundPort(zmq::socket_t& socket) {
-    // fetch endpoint string using modern cppzmq API
-    std::string endpoint = socket.get(zmq::sockopt::last_endpoint);
+inline int getBoundPort(zmq::socket_t &socket)
+{
+  // fetch endpoint string using modern cppzmq API
+  std::string endpoint = socket.get(zmq::sockopt::last_endpoint);
 
-    auto pos = endpoint.rfind(':');
-    if (pos == std::string::npos) {
-        throw std::runtime_error("Invalid endpoint: " + endpoint);
-    }
+  auto pos = endpoint.rfind(':');
+  if (pos == std::string::npos)
+  {
+    throw std::runtime_error("Invalid endpoint: " + endpoint);
+  }
 
-    return std::stoi(endpoint.substr(pos + 1));
+  return std::stoi(endpoint.substr(pos + 1));
 }

@@ -1,90 +1,72 @@
 #pragma once
 
+#include <functional>
+#include <string>
+
 // Core headers
-#include "utils/logger.hpp"
+#include "nodes/node_info.hpp"
+#include "nodes/zerolancom_node.hpp"
 #include "sockets/client.hpp"
 #include "sockets/publisher.hpp"
+#include "utils/logger.hpp"
+#include "utils/request_result.hpp"
 
-// dependent library headers
-#include <zmq.hpp>
-#include <spdlog/spdlog.h>
-#include <msgpack.hpp>
-
-namespace zlc {
-
-void init(const std::string& node_name, const std::string& ip_address)
+namespace zlc
 {
-    zlc::ZeroLanComNode::init(node_name, ip_address);
-}
+
+// =======================
+// Non-template API (cpp)
+// =======================
+
+void init(const std::string &node_name, const std::string &ip_address);
+void sleep(int ms);
+void spin();
+
+// =======================
+// Template APIs (header-only)
+// =======================
 
 template <typename HandlerT>
-void registerServiceHandler(const std::string& service_name, HandlerT handler)
+void registerServiceHandler(const std::string &service_name, HandlerT handler)
 {
-    auto & node = zlc::ZeroLanComNode::instance();
-    auto & localInfo = node.localInfo;
-    auto & serviceManager = node.serviceManager;
-    serviceManager.registerHandler(service_name, std::function(handler));
-    localInfo.registerServices(service_name, serviceManager.service_port);
-    zlc::info("Service {} registered at port {}", service_name, serviceManager.service_port);
+  auto &node = zlc::ZeroLanComNode::instance();
+  auto &localInfo = node.localInfo;
+  auto &serviceManager = node.serviceManager;
+
+  serviceManager.registerHandler(service_name, std::function(handler));
+  localInfo.registerServices(service_name, serviceManager.service_port);
+
+  zlc::info("Service {} registered at port {}", service_name,
+            serviceManager.service_port);
 }
 
 template <typename HandlerT, typename ClassT>
-void registerServiceHandler(
-    const std::string& service_name,
-    HandlerT handler,
-    ClassT* instance)
+void registerServiceHandler(const std::string &service_name, HandlerT handler,
+                            ClassT *instance)
 {
-    auto & node = zlc::ZeroLanComNode::instance();
-    auto & localInfo = node.localInfo;
-    auto & serviceManager = node.serviceManager;
-    serviceManager.registerHandler(service_name, std::bind(handler, instance));
-    localInfo.registerServices(service_name, serviceManager.service_port);
+  auto &node = zlc::ZeroLanComNode::instance();
+  auto &localInfo = node.localInfo;
+  auto &serviceManager = node.serviceManager;
+
+  serviceManager.registerHandler(service_name, std::bind(handler, instance));
+
+  localInfo.registerServices(service_name, serviceManager.service_port);
 }
 
 template <typename MessageType>
-void registerSubscriberHandler(const std::string& name, void(*callback)(const MessageType&))
+void registerSubscriberHandler(const std::string &name,
+                               void (*callback)(const MessageType &))
 {
-    auto& SubscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
-    SubscriberManager.registerTopicSubscriber(name, std::function(callback));
+  auto &subscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
+
+  subscriberManager.registerTopicSubscriber(name, std::function(callback));
 }
 
-// template <typename HandlerT, typename ClassT>
-// void registerSubscriberHandler(
-//     const std::string& service_name,
-//     HandlerT handler,
-//     ClassT* instance)
-// {
-//     auto& SubscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
-//     SubscriberManager.registerTopicSubscriber(service_name,
-//         std::bind(handler, instance, std::placeholders::_1));
-// }
-
-void sleep(int ms)
+template <typename RequestType, typename ResponseType>
+void request(const std::string &service_name, const RequestType &request,
+             ResponseType &response)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+  zlc::Client::request<RequestType, ResponseType>(service_name, request, response);
 }
 
-void spin() {
-    auto& node = zlc::ZeroLanComNode::instance();
-    try
-    {
-        while (node.isRunning()) {
-            sleep(100);
-        }
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    zlc::ZeroLanComNode::instance().stop();
-}
-
-
-    template<typename RequestType, typename ResponseType>
-    static void request(
-        const std::string& service_name,
-        const RequestType& request,
-        ResponseType& response){
-        zlc::Client::request<RequestType, ResponseType>(service_name, request, response);
-}
-}
+} // namespace zlc

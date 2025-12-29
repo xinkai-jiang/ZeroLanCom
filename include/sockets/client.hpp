@@ -1,93 +1,79 @@
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <optional>
 #include <string>
 
-#include "utils/logger.hpp"
+#include <zmq.hpp>
+
+#include "nodes/zerolancom_node.hpp"
 #include "serialization/serializer.hpp"
-#include "zerolancom_node.hpp"
+#include "utils/logger.hpp"
 
-namespace zlc {
+namespace zlc
+{
 
-// Service proxy for making remote procedure calls
-class Client {
+/**
+ * @brief Client is a stateless service proxy used to perform RPC calls.
+ *
+ * Design notes:
+ * - Non-template functions are declared here and defined in client.cpp.
+ * - Template functions must remain header-only.
+ * - This class relies on ZeroLanComNode singleton being initialized.
+ */
+class Client
+{
 public:
-    // Make a service request
-    template<typename RequestType, typename ResponseType>
-    static void request(
-        const std::string& service_name,
-        const RequestType& request,
-        ResponseType& response){
+  // Connect a ZMQ socket to the given service
+  static void connect(zmq::socket_t &socket, const std::string &service_name);
 
-        auto& node = ZeroLanComNode::instance();
-        
-        // Find service in the nodes map
-        auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
-        
-        if (serviceInfoPtr == nullptr) {
-            LOG_ERROR("Service " + service_name + " is not available");
-            return;
-        }
-        const SocketInfo& serviceInfo = *serviceInfoPtr;
-        LOG_INFO("[Client] Found service '{}' at {}:{}", 
-                service_name, serviceInfo.ip, serviceInfo.port);
-        // Create ZMQ request socket
-        zmq::socket_t req_socket(ZmqContext::instance(), zmq::socket_type::req);
-        req_socket.connect("tcp://" + serviceInfo.ip + ":" + std::to_string(serviceInfo.port));
-        LOG_INFO("[Client] Connected to service '{}' at {}:{}", 
-                service_name, serviceInfo.ip, serviceInfo.port);
-        ByteBuffer out;
-        encode(request, out);
-        // Send service name and request payload
-        req_socket.send(zmq::buffer(service_name), zmq::send_flags::sndmore);
-        req_socket.send(zmq::buffer(out.data, out.size), zmq::send_flags::none);
-        LOG_INFO("[Client] Sent request to service '{}'", service_name);
-        // Receive response
-        zmq::message_t service_name_msg;
-        if (!req_socket.recv(service_name_msg, zmq::recv_flags::none)) {
-            zlc::error("Timeout waiting for response from service " + service_name);
-            return;
-        }
-        LOG_TRACE("[Client] Received service name frame of size {} bytes.", service_name_msg.size());
-        if (!service_name_msg.more()) {
-            zlc::error("No payload frame received for service response from " + service_name);
-            return;
-        }
-        zmq::message_t payload_msg;
-        if (!req_socket.recv(payload_msg, zmq::recv_flags::none)) {
-            zlc::error("Timeout waiting for payload from service " + service_name);
-            return;
-        }
-        LOG_TRACE("[Client] Received payload frame of size {} bytes.", payload_msg.size());
-        if (payload_msg.more()) {
-            zlc::error("More message frames received than expected from service " + service_name);
-        }
-        ByteView payload{
-            static_cast<const uint8_t*>(payload_msg.data()),
-            payload_msg.size()
-        };
-        decode(payload, response);
-        LOG_INFO("[Client] Received response from service '{}'", service_name);
-    }
+  // Send a multipart request (service name + payload)
+  static void sendRequest(const std::string &service_name, const ByteView &payload,
+                          zmq::socket_t &socket);
 
-    static void waitForService(
-        const std::string& service_name,
-        int max_wait_ms = 5000,
-        int check_interval_ms = 100)
-        {
-            auto& node = ZeroLanComNode::instance();
-            int waited_ms = 0;
-            while (waited_ms < max_wait_ms) {
-                auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
-                if (serviceInfoPtr != nullptr) {
-                    LOG_INFO("[Client] Service '{}' is now available.", service_name);
-                    return;
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(check_interval_ms));
-                waited_ms += check_interval_ms;
-            }
-        }
+  // Receive multipart response and extract payload
+  static void receiveResponse(zmq::socket_t &socket, zmq::message_t &payloadMsg,
+                              const std::string &service_name);
+
+  /**
+   * @brief Perform a blocking service request.
+   *
+   * Requirements:
+   * - RequestType and ResponseType must be serializable via encode/decode.
+   * - This function blocks until a response is received or an error occurs.
+   */
+  template <typename RequestType, typename ResponseType>
+  static void request(const std::string &service_name, const RequestType &request,
+                      ResponseType &response)
+  {
+    // Create a REQ socket for this request
+    zmq::socket_t req_socket(ZmqContext::instance(), zmq::socket_type::req);
+
+    // Resolve service and connect
+    connect(req_socket, service_name);
+
+    // Serialize request
+    ByteBuffer out;
+    encode(request, out);
+
+    // Send request frames
+    sendRequest(service_name, ByteView{out.data, out.size}, req_socket);
+
+    // Receive response payload
+    zmq::message_t payloadMsg;
+    receiveResponse(req_socket, payloadMsg, service_name);
+
+    // Deserialize response
+    ByteView payload{static_cast<const uint8_t *>(payloadMsg.data()),
+                     payloadMsg.size()};
+    decode(payload, response);
+
+    zlc::info("[Client] Received response from service '{}'", service_name);
+  }
+
+  /**
+   * @brief Block until the service becomes available or timeout expires.
+   */
+  static void waitForService(const std::string &service_name, int max_wait_ms = 5000,
+                             int check_interval_ms = 100);
 };
+
 } // namespace zlc
