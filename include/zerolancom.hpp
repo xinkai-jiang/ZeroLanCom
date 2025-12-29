@@ -2,6 +2,7 @@
 
 // Core headers
 #include "zerolancom_node.hpp"
+#include "sockets/client.hpp"
 #include "utils/logger.hpp"
 #include "sockets/publisher.hpp"
 
@@ -52,4 +53,27 @@ void sleep(int ms)
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
+void spin() {
+    auto& node = zlc::ZeroLanComNode::instance();
+    try
+    {
+        while (node.isRunning()) {
+            sleep(100);
+        }
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    zlc::ZeroLanComNode::instance().stop();
+}
+
+
+    template<typename RequestType, typename ResponseType>
+    static void request(
+        const std::string& service_name,
+        const RequestType& request,
+        ResponseType& response){
+        zlc::Client::request<RequestType, ResponseType>(service_name, request, response);
+}
 }

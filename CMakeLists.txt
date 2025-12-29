@@ -49,7 +49,7 @@ target_include_directories(zerolancom INTERFACE
 )
 
 target_link_libraries(zerolancom INTERFACE
-    ${ZMQ_LIBRARIES}
+    PkgConfig::ZMQ
     spdlog::spdlog
     msgpackc
 )

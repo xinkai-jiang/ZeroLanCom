@@ -1,5 +1,4 @@
 #include "zerolancom.hpp"
-#include "sockets/client.hpp"
 
 void topicCallback(const std::string& msg) {
     LOG_INFO("Received message on subscribed topic: {}", msg);
@@ -19,7 +18,7 @@ int main() {
     zlc::registerServiceHandler("EchoService2", serviceHandler);
     zlc::Client::waitForService("EchoService");
     std::string response = "";
-    zlc::Client::request("EchoService", "Hello Service", response);
+    zlc::request("EchoService", "Hello Service", response);
     try
     {
         while (true) {

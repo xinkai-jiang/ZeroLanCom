@@ -1,8 +1,4 @@
-#include <msgpack.hpp>
 #include "zerolancom.hpp"
-#include "utils/logger.hpp"
-#include "sockets/publisher.hpp"
-#include "sockets/client.hpp"
 
 void topicCallback(const std::string& msg) {
     LOG_INFO("Received message on subscribed topic: {}", msg);
@@ -17,16 +13,13 @@ struct CustomMessage
 };
 
 int main() {
-    //initialize logger
-    zlc::Logger::init(false); //true to enable file logging
-    zlc::Logger::setLevel(zlc::LogLevel::INFO);
     zlc::init("CustomMessageNode", "127.0.0.1");
-    zlc::Publisher<CustomMessage> publisher("CustomMessage");
+    zlc::Publisher<CustomMessage> pub("CustomMessage");
     try
     {
         int counter = 0;
         while (true) {
-            publisher.publish(CustomMessage{counter, "CustomMessage", {1.0f, 2.0f, 3.0f}});
+            pub.publish(CustomMessage{counter, "CustomMessage", {1.0f, 2.0f, 3.0f}});
             counter++;
             LOG_INFO("Published message to CustomMessage");
             zlc::sleep(1000);

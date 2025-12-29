@@ -54,23 +54,6 @@ ZeroLanComNode(const std::string& name,
         mcastReceiver.stop();
     }
 
-    void spin() {
-        try
-        {
-            while (running) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            }
-        }
-        catch(const std::exception& e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-    }
-
-    void sleep(int ms) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-    }
-
     template <typename HandlerT>
     void registerServiceHandler(const std::string& name, HandlerT handler)
     {
@@ -110,6 +93,10 @@ ZeroLanComNode(const std::string& name,
     }
 
     NodeInfoManager nodesManager;
+    bool isRunning() const {
+        return running;
+    }
+
 
     private:
     LocalNodeInfo localInfo;

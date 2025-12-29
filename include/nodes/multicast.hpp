@@ -15,52 +15,52 @@ namespace zlc {
 
 class MulticastSender {
 public:
-    int sock;
-    sockaddr_in addr;
 
-    MulticastSender(const std::string& group, int port, const std::string& localIP) {
-        sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-        int ttl = 1;
-        setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
-
-        in_addr local;
-        local.s_addr = inet_addr(localIP.c_str());
-        setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &local, sizeof(local));
-
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
-        addr.sin_addr.s_addr = inet_addr(group.c_str());
-    }
-
+MulticastSender(const std::string& group, int port, const std::string& localIP) {
+    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     
-    void start(const LocalNodeInfo& localInfo) {
-        multicastSendThread = std::thread([this, &localInfo](){
-            running_ = true;
-            // LOG_INFO("Multicast sender started.");
-            while (running_) {
-                auto msg = localInfo.createHeartbeat();
-                sendHeartbeat(msg);
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
-        });
-    }
+    int ttl = 1;
+    setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
     
-    void stop() {
-        running_ = false;
-        if (multicastSendThread.joinable()) {
-            multicastSendThread.join();
+    in_addr local;
+    local.s_addr = inet_addr(localIP.c_str());
+    setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &local, sizeof(local));
+    
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = inet_addr(group.c_str());
+}
+
+
+void start(const LocalNodeInfo& localInfo) {
+    multicastSendThread = std::thread([this, &localInfo](){
+        running_ = true;
+        // LOG_INFO("Multicast sender started.");
+        while (running_) {
+            auto msg = localInfo.createHeartbeat();
+            sendHeartbeat(msg);
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
+    });
+}
+
+void stop() {
+    running_ = false;
+    if (multicastSendThread.joinable()) {
+        multicastSendThread.join();
     }
+}
 
 private:
-    
-    std::thread multicastSendThread;
-    std::atomic<bool> running_;
-    void sendHeartbeat(const std::vector<uint8_t>& msg) {
-        sendto(sock, msg.data(), msg.size(), 0,
-               (sockaddr*)&addr, sizeof(addr));
-    }
+
+std::thread multicastSendThread;
+std::atomic<bool> running_;
+int sock;
+sockaddr_in addr;
+void sendHeartbeat(const std::vector<uint8_t>& msg) {
+    sendto(sock, msg.data(), msg.size(), 0,
+    (sockaddr*)&addr, sizeof(addr));
+}
 };
 
 
