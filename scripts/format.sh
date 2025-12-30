@@ -3,7 +3,7 @@ set -e
 
 echo "Running clang-format..."
 
-find src include \
+find src include examples \
   \( -name "*.cpp" -o -name "*.hpp" -o -name "*.cc" -o -name "*.h" \) \
   -exec clang-format -i {} +
 

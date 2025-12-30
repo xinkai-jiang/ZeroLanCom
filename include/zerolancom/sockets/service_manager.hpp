@@ -56,6 +56,24 @@ public:
     };
   }
 
+  template <typename RequestType, typename ResponseType, typename ClassT>
+  void registerHandler(const std::string &name,
+                       ResponseType (ClassT::*func)(const RequestType &),
+                       ClassT *instance)
+  {
+    handlers_[name] = [instance, func](const ByteView &payload) -> std::vector<uint8_t>
+    {
+      RequestType req;
+      decode(payload, req);
+
+      ResponseType resp = (instance->*func)(req);
+
+      ByteBuffer out;
+      encode(resp, out);
+      return std::vector<uint8_t>(out.data, out.data + out.size);
+    };
+  }
+
   /**
    * @brief Register a fire-and-forget handler with request payload.
    */
@@ -68,6 +86,19 @@ public:
       RequestType req;
       decode(payload, req);
       func(req);
+      return {};
+    };
+  }
+
+  template <typename RequestType, typename ClassT>
+  void registerHandler(const std::string &name,
+                       void (ClassT::*func)(const RequestType &), ClassT *instance)
+  {
+    handlers_[name] = [instance, func](const ByteView &payload) -> std::vector<uint8_t>
+    {
+      RequestType req;
+      decode(payload, req);
+      (instance->*func)(req);
       return {};
     };
   }
@@ -88,10 +119,34 @@ public:
     };
   }
 
+  template <typename ResponseType, typename ClassT>
+  void registerHandler(const std::string &name, ResponseType (ClassT::*func)(),
+                       ClassT *instance)
+  {
+    handlers_[name] = [instance, func](const ByteView &) -> std::vector<uint8_t>
+    {
+      ResponseType ret = (instance->*func)();
+      ByteBuffer out;
+      encode(ret, out);
+      return std::vector<uint8_t>(out.data, out.data + out.size);
+    };
+  }
+
   /**
    * @brief Register a fire-and-forget handler without payload.
    */
   void registerHandler(const std::string &name, const std::function<void()> &func);
+
+  template <typename ClassT>
+  void registerHandler(const std::string &name, void (ClassT::*func)(),
+                       ClassT *instance)
+  {
+    handlers_[name] = [instance, func](const ByteView &) -> std::vector<uint8_t>
+    {
+      (instance->*func)();
+      return {};
+    };
+  }
 
   void handleRequest(const std::string &service_name, const ByteView &payload,
                      Response &response);

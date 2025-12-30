@@ -47,9 +47,33 @@ void registerServiceHandler(const std::string &service_name, HandlerT handler,
   auto &localInfo = node.localInfo;
   auto &serviceManager = node.serviceManager;
 
-  serviceManager.registerHandler(service_name, std::bind(handler, instance));
+  serviceManager.registerHandler(service_name, handler, instance);
 
   localInfo.registerServices(service_name, serviceManager.service_port);
+}
+
+/**
+ * @brief Block until the service becomes available or timeout expires.
+ */
+void waitForService(const std::string &service_name, int max_wait_ms = 1000,
+                    int check_interval_ms = 10)
+{
+  auto &node = ZeroLanComNode::instance();
+  int waited_ms = 0;
+
+  while (waited_ms < max_wait_ms)
+  {
+    auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
+
+    if (serviceInfoPtr != nullptr)
+    {
+      zlc::info("[Client] Service '{}' is now available.", service_name);
+      return;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(check_interval_ms));
+    waited_ms += check_interval_ms;
+  }
+  zlc::warn("[Client] Timeout waiting for service '{}'", service_name);
 }
 
 template <typename MessageType>
@@ -61,11 +85,21 @@ void registerSubscriberHandler(const std::string &name,
   subscriberManager.registerTopicSubscriber(name, std::function(callback));
 }
 
+// template <typename MessageType>
+// void registerSubscriberHandler(const std::string &name, std::function<void(const
+// MessageType &)> callback)
+// {
+//   auto &subscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
+
+//   subscriberManager.registerTopicSubscriber(name, callback);
+// }
+
 template <typename RequestType, typename ResponseType>
 void request(const std::string &service_name, const RequestType &request,
              ResponseType &response)
 {
-  zlc::Client::request<RequestType, ResponseType>(service_name, request, response);
+  waitForService(service_name);
+  Client::request<RequestType, ResponseType>(service_name, request, response);
 }
 
 } // namespace zlc

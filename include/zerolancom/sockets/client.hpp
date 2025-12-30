@@ -64,16 +64,13 @@ public:
     // Deserialize response
     ByteView payload{static_cast<const uint8_t *>(payloadMsg.data()),
                      payloadMsg.size()};
-    decode(payload, response);
+    if (payload.size != 0)
+    {
+      decode(payload, response);
+    }
 
     zlc::info("[Client] Received response from service '{}'", service_name);
   }
-
-  /**
-   * @brief Block until the service becomes available or timeout expires.
-   */
-  static void waitForService(const std::string &service_name, int max_wait_ms = 5000,
-                             int check_interval_ms = 100);
 };
 
 } // namespace zlc

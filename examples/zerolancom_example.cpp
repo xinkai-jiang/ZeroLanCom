@@ -20,7 +20,7 @@ int main()
   zlc::registerSubscriberHandler("TestTopic", topicCallback);
   zlc::Publisher<std::string> publisher("TestTopic");
   zlc::registerServiceHandler("EchoService2", serviceHandler);
-  zlc::Client::waitForService("EchoService");
+  zlc::waitForService("EchoService");
   std::string response = "";
   zlc::request("EchoService", "Hello Service", response);
   try

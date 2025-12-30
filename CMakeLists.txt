@@ -22,6 +22,7 @@ endif()
 find_package(spdlog REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZMQ REQUIRED libzmq)
+find_package(fmt REQUIRED)
 # find_package(msgpack-cpp REQUIRED)
 
 # ----------------------------
@@ -39,6 +40,11 @@ target_include_directories(zerolancom
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(zerolancom PUBLIC
+  fmt::fmt
+  spdlog::spdlog
+  ${ZMQ_LIBRARIES}
 )
 
 # ----------------------------
