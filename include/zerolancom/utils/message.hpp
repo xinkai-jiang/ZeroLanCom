@@ -8,8 +8,6 @@
 namespace zlc
 {
 
-static std::string Empty{};
-
 inline std::string generateUUID()
 {
   static thread_local std::mt19937_64 rng{std::random_device{}()};

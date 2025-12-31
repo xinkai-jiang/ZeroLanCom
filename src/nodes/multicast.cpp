@@ -61,7 +61,7 @@ void MulticastSender::stop()
   }
 }
 
-void MulticastSender::sendHeartbeat(const std::vector<uint8_t> &msg)
+void MulticastSender::sendHeartbeat(const Bytes &msg)
 {
   sendto(sock_, msg.data(), msg.size(), 0, reinterpret_cast<sockaddr *>(&addr_),
          sizeof(addr_));
@@ -106,7 +106,7 @@ void MulticastReceiver::start(NodeInfoManager &nodeManager)
   multicastReceiveThread_ = std::thread(
       [this, &nodeManager]()
       {
-        std::vector<uint8_t> buf(256);
+        Bytes buf(256);
         sockaddr_in src{};
         socklen_t slen = sizeof(src);
 

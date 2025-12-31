@@ -1,3 +1,13 @@
 @PACKAGE_INIT@
 
+include(CMakeFindDependencyMacro)
+
+# Declare dependencies of zerolancom
+find_dependency(fmt)
+find_dependency(spdlog)
+
+# If you wrapped ZeroMQ as ZeroMQ::ZeroMQ
+find_dependency(PkgConfig)
+pkg_check_modules(ZMQ REQUIRED libzmq)
+
 include("${CMAKE_CURRENT_LIST_DIR}/zerolancomTargets.cmake")

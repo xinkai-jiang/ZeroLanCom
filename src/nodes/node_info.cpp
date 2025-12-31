@@ -26,7 +26,7 @@ SocketInfo SocketInfo::decode(BinReader &r, const std::string &ip)
 
 /* ================= NodeInfo ================= */
 
-std::vector<uint8_t> NodeInfo::encode() const
+Bytes NodeInfo::encode() const
 {
   BinWriter w;
 
@@ -99,7 +99,7 @@ LocalNodeInfo::LocalNodeInfo(const std::string &name, const std::string &ip)
   nodeInfo.ip = ip;
 }
 
-std::vector<uint8_t> LocalNodeInfo::createHeartbeat() const
+Bytes LocalNodeInfo::createHeartbeat() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return nodeInfo.encode();

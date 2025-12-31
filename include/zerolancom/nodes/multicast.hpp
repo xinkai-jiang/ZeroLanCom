@@ -23,7 +23,7 @@ public:
   void stop();
 
 private:
-  void sendHeartbeat(const std::vector<uint8_t> &msg);
+  void sendHeartbeat(const Bytes &msg);
 
 private:
   int sock_;

@@ -25,7 +25,7 @@ public:
   static constexpr uint8_t FLAG_HAS_DETAIL = 0x01;
 
   Response() = default;
-  explicit Response(std::string code, std::vector<uint8_t> payload = {})
+  explicit Response(std::string code, Bytes payload = {})
       : code(std::move(code)), payload(std::move(payload))
   {
   }
@@ -34,7 +34,7 @@ public:
   static const char *description(const std::string &code);
 
   std::string code{std::string(ResponseStatus::SUCCESS)};
-  std::vector<uint8_t> payload;
+  Bytes payload;
 };
 
 } // namespace zlc

@@ -17,6 +17,8 @@
 namespace zlc
 {
 
+using ServiceCallback = std::function<Bytes(const ByteView &payload)>;
+
 /**
  * @brief ServiceManager handles incoming RPC service requests.
  *
@@ -43,16 +45,14 @@ public:
   void registerHandler(const std::string &name,
                        const std::function<ResponseType(const RequestType &)> &func)
   {
-    handlers_[name] = [func](const ByteView &payload) -> std::vector<uint8_t>
+    handlers_[name] = [func](const ByteView &payload) -> Bytes
     {
       RequestType req;
       decode(payload, req);
-
       ResponseType resp = func(req);
-
       ByteBuffer out;
       encode(resp, out);
-      return std::vector<uint8_t>(out.data, out.data + out.size);
+      return Bytes(out.data, out.data + out.size);
     };
   }
 
@@ -61,90 +61,14 @@ public:
                        ResponseType (ClassT::*func)(const RequestType &),
                        ClassT *instance)
   {
-    handlers_[name] = [instance, func](const ByteView &payload) -> std::vector<uint8_t>
+    handlers_[name] = [instance, func](const ByteView &payload) -> Bytes
     {
       RequestType req;
       decode(payload, req);
-
       ResponseType resp = (instance->*func)(req);
-
       ByteBuffer out;
       encode(resp, out);
-      return std::vector<uint8_t>(out.data, out.data + out.size);
-    };
-  }
-
-  /**
-   * @brief Register a fire-and-forget handler with request payload.
-   */
-  template <typename RequestType>
-  void registerHandler(const std::string &name,
-                       const std::function<void(const RequestType &)> &func)
-  {
-    handlers_[name] = [func](const ByteView &payload) -> std::vector<uint8_t>
-    {
-      RequestType req;
-      decode(payload, req);
-      func(req);
-      return {};
-    };
-  }
-
-  template <typename RequestType, typename ClassT>
-  void registerHandler(const std::string &name,
-                       void (ClassT::*func)(const RequestType &), ClassT *instance)
-  {
-    handlers_[name] = [instance, func](const ByteView &payload) -> std::vector<uint8_t>
-    {
-      RequestType req;
-      decode(payload, req);
-      (instance->*func)(req);
-      return {};
-    };
-  }
-
-  /**
-   * @brief Register a handler that returns a response without request payload.
-   */
-  template <typename ResponseType>
-  void registerHandler(const std::string &name,
-                       const std::function<ResponseType()> &func)
-  {
-    handlers_[name] = [func](const ByteView &) -> std::vector<uint8_t>
-    {
-      ResponseType ret = func();
-      ByteBuffer out;
-      encode(ret, out);
-      return std::vector<uint8_t>(out.data, out.data + out.size);
-    };
-  }
-
-  template <typename ResponseType, typename ClassT>
-  void registerHandler(const std::string &name, ResponseType (ClassT::*func)(),
-                       ClassT *instance)
-  {
-    handlers_[name] = [instance, func](const ByteView &) -> std::vector<uint8_t>
-    {
-      ResponseType ret = (instance->*func)();
-      ByteBuffer out;
-      encode(ret, out);
-      return std::vector<uint8_t>(out.data, out.data + out.size);
-    };
-  }
-
-  /**
-   * @brief Register a fire-and-forget handler without payload.
-   */
-  void registerHandler(const std::string &name, const std::function<void()> &func);
-
-  template <typename ClassT>
-  void registerHandler(const std::string &name, void (ClassT::*func)(),
-                       ClassT *instance)
-  {
-    handlers_[name] = [instance, func](const ByteView &) -> std::vector<uint8_t>
-    {
-      (instance->*func)();
-      return {};
+      return Bytes(out.data, out.data + out.size);
     };
   }
 
@@ -165,8 +89,7 @@ private:
   void responseSocketThread();
 
 private:
-  std::unordered_map<std::string, std::function<std::vector<uint8_t>(const ByteView &)>>
-      handlers_;
+  std::unordered_map<std::string, std::function<Bytes(const ByteView &)>> handlers_;
 
   bool is_running{false};
 

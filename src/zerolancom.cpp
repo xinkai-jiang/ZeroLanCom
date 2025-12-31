@@ -39,4 +39,23 @@ void spin()
   node.stop();
 }
 
+void waitForService(const std::string &service_name, int max_wait_ms,
+                    int check_interval_ms)
+{
+  auto &node = ZeroLanComNode::instance();
+  int waited_ms = 0;
+
+  while (waited_ms < max_wait_ms)
+  {
+    auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
+    if (serviceInfoPtr != nullptr)
+    {
+      zlc::info("[Client] Service '{}' is now available.", service_name);
+      return;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(check_interval_ms));
+    waited_ms += check_interval_ms;
+  }
+  zlc::warn("[Client] Timeout waiting for service '{}'", service_name);
+}
 } // namespace zlc

@@ -7,20 +7,22 @@ std::string callbackTypeA(const std::string &msg)
   return "Response from CallbackTypeA";
 }
 
-std::string callbackTypeB()
+std::string callbackTypeB(const zlc::Empty &)
 {
   zlc::info("Received request on CallbackTypeB");
   return "Response from CallbackTypeB";
 }
 
-void callbackTypeC(const std::string &msg)
+zlc::Empty callbackTypeC(const std::string &msg)
 {
   zlc::info("Received request on CallbackTypeC: {}", msg);
+  return zlc::empty;
 }
 
-void callbackTypeD()
+zlc::Empty callbackTypeD(const zlc::Empty &)
 {
   zlc::info("Received request on CallbackTypeD");
+  return zlc::empty;
 }
 
 class ServiceHandlerClass
@@ -32,20 +34,22 @@ public:
     return "Response from memberFunctionHandler";
   }
 
-  std::string memberFunctionHandlerB()
+  std::string memberFunctionHandlerB(const zlc::Empty &)
   {
     zlc::info("Received request on memberFunctionHandlerB");
     return "Response from memberFunctionHandlerB";
   }
 
-  void memberFunctionHandlerC(const std::string &msg)
+  zlc::Empty memberFunctionHandlerC(const std::string &msg)
   {
     zlc::info("Received request on memberFunctionHandlerC: {}", msg);
+    return zlc::empty;
   }
 
-  void memberFunctionHandlerD()
+  zlc::Empty memberFunctionHandlerD(const zlc::Empty &)
   {
     zlc::info("Received request on memberFunctionHandlerD");
+    return zlc::empty;
   }
 };
 
@@ -60,11 +64,11 @@ int main()
   zlc::registerServiceHandler("ServiceD", callbackTypeD);
   zlc::request("ServiceA", "Hello Service A", response);
   zlc::info("================================================");
-  zlc::request("ServiceB", zlc::Empty, response);
+  zlc::request("ServiceB", zlc::empty, response);
   zlc::info("================================================");
-  zlc::request("ServiceC", "Hello Service C", zlc::Empty);
+  zlc::request("ServiceC", "Hello Service C", zlc::empty);
   zlc::info("================================================");
-  zlc::request("ServiceD", zlc::Empty, zlc::Empty);
+  zlc::request("ServiceD", zlc::empty, zlc::empty);
   zlc::info("================================================");
   ServiceHandlerClass handlerInstance;
   zlc::registerServiceHandler("ServiceE", &ServiceHandlerClass::memberFunctionHandlerA,
@@ -78,11 +82,11 @@ int main()
                               &handlerInstance);
   zlc::request("ServiceE", "Hello Service E", response);
   zlc::info("================================================");
-  zlc::request("ServiceF", zlc::Empty, response);
+  zlc::request("ServiceF", zlc::empty, response);
   zlc::info("================================================");
-  zlc::request("ServiceG", "Hello Service G", zlc::Empty);
+  zlc::request("ServiceG", "Hello Service G", zlc::empty);
   zlc::info("================================================");
-  zlc::request("ServiceH", zlc::Empty, zlc::Empty);
+  zlc::request("ServiceH", zlc::empty, zlc::empty);
   zlc::info("================================================");
   return 0;
 }

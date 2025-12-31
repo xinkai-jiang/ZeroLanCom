@@ -34,7 +34,7 @@ struct NodeInfo
   std::vector<SocketInfo> topics;
   std::vector<SocketInfo> services;
 
-  std::vector<uint8_t> encode() const;
+  Bytes encode() const;
   static NodeInfo decode(ByteView bv);
   void printNodeInfo() const;
 };
@@ -49,7 +49,7 @@ struct LocalNodeInfo
 
   LocalNodeInfo(const std::string &name, const std::string &ip);
 
-  std::vector<uint8_t> createHeartbeat() const;
+  Bytes createHeartbeat() const;
   void registerTopic(const std::string &name, uint16_t port);
   void registerServices(const std::string &name, uint16_t port);
 };

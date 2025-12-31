@@ -28,7 +28,6 @@ int main()
     while (true)
     {
       publisher.publish("Hello, ZeroLanCom!");
-      zlc::info("Published message to TestTopic");
       zlc::sleep(1000);
     }
   }

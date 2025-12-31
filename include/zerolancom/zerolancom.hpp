@@ -4,8 +4,6 @@
 #include <string>
 
 // Core headers
-// #include "zerolancom/nodes/zerolancom_node.hpp"
-// #include "zerolancom/nodes/node_info.hpp"
 #include "zerolancom/sockets/client.hpp"
 #include "zerolancom/sockets/publisher.hpp"
 #include "zerolancom/utils/logger.hpp"
@@ -21,9 +19,11 @@ void init(const std::string &node_name, const std::string &ip_address);
 void sleep(int ms);
 void spin();
 
-// =======================
-// Template APIs (header-only)
-// =======================
+/**
+ * @brief Block until the service becomes available or timeout expires.
+ */
+void waitForService(const std::string &service_name, int max_wait_ms = 1000,
+                    int check_interval_ms = 10);
 
 template <typename HandlerT>
 void registerServiceHandler(const std::string &service_name, HandlerT handler)
@@ -44,62 +44,40 @@ void registerServiceHandler(const std::string &service_name, HandlerT handler,
                             ClassT *instance)
 {
   auto &node = zlc::ZeroLanComNode::instance();
-  auto &localInfo = node.localInfo;
-  auto &serviceManager = node.serviceManager;
 
-  serviceManager.registerHandler(service_name, handler, instance);
+  node.serviceManager.registerHandler(service_name, handler, instance);
 
-  localInfo.registerServices(service_name, serviceManager.service_port);
+  uint16_t port = node.serviceManager.service_port;
+  node.localInfo.registerServices(service_name, port);
 }
 
-/**
- * @brief Block until the service becomes available or timeout expires.
- */
-void waitForService(const std::string &service_name, int max_wait_ms = 1000,
-                    int check_interval_ms = 10)
+template <typename HandlerT>
+void registerSubscriberHandler(const std::string &name, HandlerT callback)
 {
-  auto &node = ZeroLanComNode::instance();
-  int waited_ms = 0;
-
-  while (waited_ms < max_wait_ms)
-  {
-    auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
-
-    if (serviceInfoPtr != nullptr)
-    {
-      zlc::info("[Client] Service '{}' is now available.", service_name);
-      return;
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(check_interval_ms));
-    waited_ms += check_interval_ms;
-  }
-  zlc::warn("[Client] Timeout waiting for service '{}'", service_name);
+  auto &subscriberManager = ZeroLanComNode::instance().subscriberManager;
+  subscriberManager.registerTopicSubscriber(name, callback);
 }
 
-template <typename MessageType>
-void registerSubscriberHandler(const std::string &name,
-                               void (*callback)(const MessageType &))
+template <typename HandlerT, typename ClassT>
+void registerSubscriberHandler(const std::string &name, HandlerT callback,
+                               ClassT *instance)
 {
-  auto &subscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
-
-  subscriberManager.registerTopicSubscriber(name, std::function(callback));
+  auto &subscriberManager = ZeroLanComNode::instance().subscriberManager;
+  subscriberManager.registerTopicSubscriber(name, callback, instance);
 }
-
-// template <typename MessageType>
-// void registerSubscriberHandler(const std::string &name, std::function<void(const
-// MessageType &)> callback)
-// {
-//   auto &subscriberManager = zlc::ZeroLanComNode::instance().subscriberManager;
-
-//   subscriberManager.registerTopicSubscriber(name, callback);
-// }
 
 template <typename RequestType, typename ResponseType>
-void request(const std::string &service_name, const RequestType &request,
-             ResponseType &response)
+void request(const std::string &service_name, const RequestType &req, ResponseType &res)
 {
   waitForService(service_name);
-  Client::request<RequestType, ResponseType>(service_name, request, response);
+  Client::request<RequestType, ResponseType>(service_name, req, res);
+}
+
+template <typename RequestType>
+void request(const std::string &service_name, const RequestType &req, Empty &)
+{
+  Empty zlc_empty;
+  request<RequestType, Empty>(service_name, req, zlc_empty);
 }
 
 } // namespace zlc

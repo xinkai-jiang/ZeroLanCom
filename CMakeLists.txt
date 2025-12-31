@@ -19,11 +19,10 @@ endif()
 # ----------------------------
 # External dependencies
 # ----------------------------
+find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(ZMQ REQUIRED libzmq)
-find_package(fmt REQUIRED)
-# find_package(msgpack-cpp REQUIRED)
+pkg_check_modules(ZMQ REQUIRED libzmq) # ZeroMQ cannot be found by find_package
 
 # ----------------------------
 # Source files
@@ -66,8 +65,8 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
 
 install(EXPORT zerolancomTargets
     FILE zerolancomTargets.cmake
-    NAMESPACE ZeroLanCom::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ZeroLanCom
+    NAMESPACE zerolancom::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zerolancom
 )
 
 
@@ -79,17 +78,17 @@ include(CMakePackageConfigHelpers)
 configure_package_config_file(
     ${PROJECT_SOURCE_DIR}/cmake/zerolancomConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/zerolancomConfig.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ZeroLanCom
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zerolancom
 )
 
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/zerolancomConfig.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ZeroLanCom
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zerolancom
 )
 
 export(EXPORT zerolancomTargets
     FILE ${CMAKE_CURRENT_BINARY_DIR}/zerolancomTargets.cmake
-    NAMESPACE ZeroLanCom::
+    NAMESPACE zerolancom::
 )
 
 configure_file(

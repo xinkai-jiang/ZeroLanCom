@@ -42,7 +42,7 @@ public:
    */
   template <typename MessageType>
   void registerTopicSubscriber(const std::string &topicName,
-                               const std::function<void(const MessageType &)> &callback)
+                               void (*callback)(const MessageType &))
   {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -59,11 +59,7 @@ public:
 
     sub.socket =
         std::make_unique<zmq::socket_t>(ZmqContext::instance(), zmq::socket_type::sub);
-
-    // Subscribe to all messages on this socket
     sub.socket->set(zmq::sockopt::subscribe, "");
-
-    // Initial discovery of publisher URLs
     auto urls = findTopicURLs(topicName);
     for (const auto &url : urls)
     {
@@ -71,7 +67,37 @@ public:
       zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
       sub.publisherURLs.push_back(url);
     }
+    subscribers_.push_back(std::move(sub));
+  }
 
+  template <typename MessageType, typename ClassT>
+  void registerTopicSubscriber(const std::string &topicName,
+                               void (ClassT::*callback)(const MessageType &),
+                               ClassT *instance)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    Subscriber sub;
+    sub.topicName = topicName;
+
+    // Wrap typed callback into raw ByteView callback
+    sub.callback = [callback, instance](const ByteView &view)
+    {
+      MessageType msg;
+      decode(view, msg);
+      (instance->*callback)(msg);
+    };
+
+    sub.socket =
+        std::make_unique<zmq::socket_t>(ZmqContext::instance(), zmq::socket_type::sub);
+    sub.socket->set(zmq::sockopt::subscribe, "");
+    auto urls = findTopicURLs(topicName);
+    for (const auto &url : urls)
+    {
+      sub.socket->connect(url);
+      zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
+      sub.publisherURLs.push_back(url);
+    }
     subscribers_.push_back(std::move(sub));
   }
 

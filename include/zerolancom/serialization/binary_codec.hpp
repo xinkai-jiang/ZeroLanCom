@@ -8,6 +8,8 @@
 namespace zlc
 {
 
+using Bytes = std::vector<uint8_t>;
+
 // =======================
 // Zero-copy view for decode
 // =======================
@@ -42,7 +44,7 @@ struct ByteBuffer
 
 struct BinWriter
 {
-  std::vector<uint8_t> buf;
+  Bytes buf;
 
   void write_u16(uint16_t v);
   void write_u32(uint32_t v);

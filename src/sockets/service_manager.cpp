@@ -35,16 +35,6 @@ void ServiceManager::stop()
   }
 }
 
-void ServiceManager::registerHandler(const std::string &name,
-                                     const std::function<void()> &func)
-{
-  handlers_[name] = [func](const ByteView &) -> std::vector<uint8_t>
-  {
-    func();
-    return {};
-  };
-}
-
 void ServiceManager::handleRequest(const std::string &service_name,
                                    const ByteView &payload, Response &response)
 {
