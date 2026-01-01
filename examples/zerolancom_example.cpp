@@ -1,41 +1,40 @@
-#include "zerolancom_node.hpp"
-#include "utils/logger.hpp"
-#include "sockets/publisher.hpp"
-#include "sockets/client.hpp"
+#include "zerolancom/zerolancom.hpp"
+#include <iostream>
 
-void topicCallback(const std::string& msg) {
-    LOG_INFO("Received message on subscribed topic: {}", msg);
+void topicCallback(const std::string &msg)
+{
+  zlc::info("Received message on subscribed topic: {}", msg);
 }
 
-std::string serviceHandler(const std::string& request) {
-    LOG_INFO("Service request received.");
-    return std::string("Echo: ") + request;
+std::string serviceHandler(const std::string &request)
+{
+  zlc::info("Service request received.");
+  return std::string("Echo: ") + request;
 }
 
-int main() {
-    //initialize logger
-    zlc::Logger::init(false); //true to enable file logging
-    zlc::Logger::setLevel(zlc::LogLevel::INFO);
-    zlc::ZeroLanComNode& node = zlc::ZeroLanComNode::init("TestNode", "127.0.0.1");
-    node.registerServiceHandler("EchoService", serviceHandler);
-    node.registerSubscriber<std::string>("TestTopic", topicCallback);
-    zlc::Publisher<std::string> publisher("TestTopic");
-    node.registerServiceHandler("EchoService2", serviceHandler);
-    zlc::Client::waitForService("EchoService");
-    std::string response = "";
-    zlc::Client::request<std::string, std::string>("EchoService", "Hello Service", response);
-    try
+int main()
+{
+  // initialize logger
+  zlc::init("TestNode", "127.0.0.1");
+  zlc::registerServiceHandler("EchoService", serviceHandler);
+  zlc::registerSubscriberHandler("TestTopic", topicCallback);
+  zlc::Publisher<std::string> publisher("TestTopic");
+  zlc::registerServiceHandler("EchoService2", serviceHandler);
+  zlc::waitForService("EchoService");
+  std::string response = "";
+  zlc::request("EchoService", "Hello Service", response);
+  try
+  {
+    while (true)
     {
-        while (true) {
-            publisher.publish("Hello, ZeroLanCom!");
-            LOG_INFO("Published message to TestTopic");
-            node.sleep(1000);
-        }
+      publisher.publish("Hello, ZeroLanCom!");
+      zlc::sleep(1000);
     }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    
-    return 0;
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << e.what() << '\n';
+  }
+
+  return 0;
 }
