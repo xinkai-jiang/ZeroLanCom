@@ -3,8 +3,10 @@
 #include <arpa/inet.h>
 #include <chrono>
 #include <unistd.h>
+#include <iostream>
 
 #include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/exception.hpp"
 
 namespace zlc
 {
@@ -106,7 +108,7 @@ void MulticastReceiver::start(NodeInfoManager &nodeManager)
   multicastReceiveThread_ = std::thread(
       [this, &nodeManager]()
       {
-        Bytes buf(256);
+        Bytes buf(1024);
         sockaddr_in src{};
         socklen_t slen = sizeof(src);
 
@@ -119,12 +121,23 @@ void MulticastReceiver::start(NodeInfoManager &nodeManager)
             continue;
 
           std::string ip = inet_ntoa(src.sin_addr);
-          NodeInfo info =
-              NodeInfo::decode(ByteView{buf.data(), static_cast<size_t>(n)});
-          info.ip = ip;
-
-          nodeManager.processHeartbeat(info);
-          nodeManager.checkHeartbeats();
+          try
+          {
+            NodeInfo info = NodeInfo::decode(ByteView{buf.data(), static_cast<size_t>(n)});
+            info.ip = ip;
+            nodeManager.processHeartbeat(info);
+            nodeManager.checkHeartbeats();
+          }
+          catch(const NodeInfoDecodeException& e)
+          {
+            warn("[MulticastReceiver] Failed to decode NodeInfo from {}: {}", ip, e.what());
+            continue;
+          }
+          catch(const std::exception& e)
+          {
+            std::cerr << e.what() << '\n';
+          }
+          
 
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
