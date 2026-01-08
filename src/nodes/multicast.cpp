@@ -2,11 +2,11 @@
 
 #include <arpa/inet.h>
 #include <chrono>
-#include <unistd.h>
 #include <iostream>
+#include <unistd.h>
 
-#include "zerolancom/utils/logger.hpp"
 #include "zerolancom/utils/exception.hpp"
+#include "zerolancom/utils/logger.hpp"
 
 namespace zlc
 {
@@ -123,21 +123,22 @@ void MulticastReceiver::start(NodeInfoManager &nodeManager)
           std::string ip = inet_ntoa(src.sin_addr);
           try
           {
-            NodeInfo info = NodeInfo::decode(ByteView{buf.data(), static_cast<size_t>(n)});
+            NodeInfo info =
+                NodeInfo::decode(ByteView{buf.data(), static_cast<size_t>(n)});
             info.ip = ip;
             nodeManager.processHeartbeat(info);
             nodeManager.checkHeartbeats();
           }
-          catch(const NodeInfoDecodeException& e)
+          catch (const NodeInfoDecodeException &e)
           {
-            warn("[MulticastReceiver] Failed to decode NodeInfo from {}: {}", ip, e.what());
+            warn("[MulticastReceiver] Failed to decode NodeInfo from {}: {}", ip,
+                 e.what());
             continue;
           }
-          catch(const std::exception& e)
+          catch (const std::exception &e)
           {
             std::cerr << e.what() << '\n';
           }
-          
 
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

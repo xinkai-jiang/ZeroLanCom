@@ -8,14 +8,21 @@ namespace zlc
 
 namespace ResponseStatus
 {
-constexpr std::string_view SUCCESS = "SUCCESS";
-constexpr std::string_view FAIL = "FAIL";
-constexpr std::string_view INVALID_ARG = "INVALID_ARG";
-constexpr std::string_view BUSY = "BUSY";
-constexpr std::string_view UNSUPPORTED = "UNSUPPORTED";
-constexpr std::string_view TIMEOUT = "TIMEOUT";
-constexpr std::string_view COMM_ERROR = "COMM_ERROR";
-constexpr std::string_view INTERNAL_ERROR = "INTERNAL_ERROR";
+using namespace std::string_view_literals;
+
+constexpr std::string_view SUCCESS = "SUCCESS"sv;
+constexpr std::string_view NOSERVICE = "NOSERVICE"sv;
+constexpr std::string_view INVALID_RESPONSE = "INVALID_RESPONSE"sv;
+constexpr std::string_view SERVICE_FAIL = "SERVICE_FAIL"sv;
+constexpr std::string_view SERVICE_TIMEOUT = "SERVICE_TIMEOUT"sv;
+constexpr std::string_view INVALID_REQUEST = "INVALID_REQUEST"sv;
+constexpr std::string_view UNKNOWN_ERROR = "UNKNOWN_ERROR"sv;
+
+// Helper to validate incoming status strings
+inline bool is_error(std::string_view status)
+{
+  return status != SUCCESS;
+}
 } // namespace ResponseStatus
 
 class Response

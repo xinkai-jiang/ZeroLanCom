@@ -3,6 +3,7 @@
 #include <msgpack.hpp>
 
 #include "zerolancom/serialization/binary_codec.hpp"
+#include "zerolancom/utils/exception.hpp"
 #include "zerolancom/utils/message.hpp"
 
 // NOTE:
@@ -23,17 +24,31 @@ inline static Empty empty{};
 // Encode an object into a msgpack byte buffer.
 template <typename T> inline void encode(const T &obj, ByteBuffer &out)
 {
-  out.size = 0;
-  msgpack::packer<ByteBuffer> pk(out);
-  pk.pack(obj);
+  try
+  {
+    out.size = 0;
+    msgpack::packer<ByteBuffer> pk(out);
+    pk.pack(obj);
+  }
+  catch (const std::exception &e)
+  {
+    throw EncodeException(e.what());
+  }
 }
 
 // Decode an object from a msgpack byte buffer.
 template <typename T> inline void decode(const ByteView &bv, T &out)
 {
-  msgpack::object_handle oh =
-      msgpack::unpack(reinterpret_cast<const char *>(bv.data), bv.size);
-  oh.get().convert(out);
+  try
+  {
+    msgpack::object_handle oh =
+        msgpack::unpack(reinterpret_cast<const char *>(bv.data), bv.size);
+    oh.get().convert(out);
+  }
+  catch (const std::exception &e)
+  {
+    throw DecodeException(e.what());
+  }
 }
 
 } // namespace zlc

@@ -1,9 +1,9 @@
 #include "zerolancom/serialization/binary_codec.hpp"
 
+#include "zerolancom/utils/exception.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include "zerolancom/utils/exception.hpp"
 
 namespace zlc
 {
