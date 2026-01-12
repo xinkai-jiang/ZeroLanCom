@@ -1,9 +1,9 @@
 #include "zerolancom/serialization/binary_codec.hpp"
 
+#include "zerolancom/utils/exception.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include <stdexcept>
 
 namespace zlc
 {
@@ -67,7 +67,7 @@ void BinWriter::write_string(const std::string &s)
 void BinWriter::write_fixed_string(const std::string &s, size_t len)
 {
   if (s.size() != len)
-    throw std::runtime_error("fixed string length mismatch");
+    throw NodeInfoDecodeException("fixed string length mismatch");
   buf.insert(buf.end(), s.begin(), s.end());
 }
 
@@ -76,7 +76,7 @@ void BinWriter::write_fixed_string(const std::string &s, size_t len)
 uint16_t BinReader::read_u16()
 {
   if (view.size < 2)
-    throw std::runtime_error("decode u16 OOB");
+    throw NodeInfoDecodeException("decode u16 OOB");
   uint16_t v = (view.data[0] << 8) | view.data[1];
   view.data += 2;
   view.size -= 2;
@@ -86,7 +86,7 @@ uint16_t BinReader::read_u16()
 uint32_t BinReader::read_u32()
 {
   if (view.size < 4)
-    throw std::runtime_error("decode u32 OOB");
+    throw NodeInfoDecodeException("decode u32 OOB");
   uint32_t v = (uint32_t(view.data[0]) << 24) | (uint32_t(view.data[1]) << 16) |
                (uint32_t(view.data[2]) << 8) | uint32_t(view.data[3]);
   view.data += 4;
@@ -98,7 +98,7 @@ std::string BinReader::read_string()
 {
   uint16_t len = read_u16();
   if (view.size < len)
-    throw std::runtime_error("decode string OOB");
+    throw NodeInfoDecodeException("decode string OOB");
   std::string s(reinterpret_cast<const char *>(view.data), len);
   view.data += len;
   view.size -= len;
@@ -108,7 +108,7 @@ std::string BinReader::read_string()
 std::string BinReader::read_fixed_string(size_t len)
 {
   if (view.size < len)
-    throw std::runtime_error("decode fixed string OOB");
+    throw NodeInfoDecodeException("decode fixed string OOB");
   std::string s(reinterpret_cast<const char *>(view.data), len);
   view.data += len;
   view.size -= len;

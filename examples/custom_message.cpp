@@ -11,7 +11,7 @@ struct CustomMessage
   int count;
   std::string name;
   std::vector<float> data;
-  MSGPACK_DEFINE_MAP(count, name, data);
+  MSGPACK_DEFINE_MAP(count, name, data)
 };
 
 int main()

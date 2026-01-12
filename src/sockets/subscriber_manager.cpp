@@ -78,37 +78,45 @@ void SubscriberManager::pollLoop()
 
   while (is_running_)
   {
-    std::vector<zmq::pollitem_t> poll_items;
-    std::vector<Subscriber *> subs;
-
+    try
     {
-      std::lock_guard<std::mutex> lock(mutex_);
-      poll_items.reserve(subscribers_.size());
-      subs.reserve(subscribers_.size());
+      std::vector<zmq::pollitem_t> poll_items;
+      std::vector<Subscriber *> subs;
 
-      for (auto &sub : subscribers_)
       {
-        poll_items.push_back({static_cast<void *>(*sub.socket), 0, ZMQ_POLLIN, 0});
-        subs.push_back(&sub);
+        std::lock_guard<std::mutex> lock(mutex_);
+        poll_items.reserve(subscribers_.size());
+        subs.reserve(subscribers_.size());
+
+        for (auto &sub : subscribers_)
+        {
+          poll_items.push_back({static_cast<void *>(*sub.socket), 0, ZMQ_POLLIN, 0});
+          subs.push_back(&sub);
+        }
+      }
+
+      zmq::poll(poll_items.data(), poll_items.size(), std::chrono::milliseconds(100));
+
+      for (size_t i = 0; i < poll_items.size(); ++i)
+      {
+        if (poll_items[i].revents & ZMQ_POLLIN)
+        {
+          zmq::message_t msg;
+          if (!subs[i]->socket->recv(msg, zmq::recv_flags::none))
+          {
+            continue;
+          }
+
+          ByteView view{static_cast<const uint8_t *>(msg.data()), msg.size()};
+
+          subs[i]->callback(view);
+        }
       }
     }
-
-    zmq::poll(poll_items.data(), poll_items.size(), std::chrono::milliseconds(100));
-
-    for (size_t i = 0; i < poll_items.size(); ++i)
+    catch (const std::exception &e)
     {
-      if (poll_items[i].revents & ZMQ_POLLIN)
-      {
-        zmq::message_t msg;
-        if (!subs[i]->socket->recv(msg, zmq::recv_flags::none))
-        {
-          continue;
-        }
-
-        ByteView view{static_cast<const uint8_t *>(msg.data()), msg.size()};
-
-        subs[i]->callback(view);
-      }
+      zlc::info("[SubscriberManager] Poll thread exception: {}", e.what());
+      continue;
     }
   }
 }

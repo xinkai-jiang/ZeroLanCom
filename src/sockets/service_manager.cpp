@@ -1,4 +1,5 @@
 #include "zerolancom/sockets/service_manager.hpp"
+#include "zerolancom/utils/exception.hpp"
 
 namespace zlc
 {
@@ -44,7 +45,7 @@ void ServiceManager::handleRequest(const std::string &service_name,
 
   if (it == handlers_.end())
   {
-    response.code = ResponseStatus::FAIL;
+    response.code = ResponseStatus::NOSERVICE;
     return;
   }
 
@@ -54,11 +55,23 @@ void ServiceManager::handleRequest(const std::string &service_name,
   {
     response.payload = it->second(payload);
   }
+  catch (const DecodeException &e)
+  {
+    zlc::error("[ServiceManager] ZMQ error while handling service '{}': {}",
+               service_name, e.what());
+    response.code = ResponseStatus::INVALID_RESPONSE;
+  }
+  catch (const EncodeException &e)
+  {
+    zlc::error("[ServiceManager] ZMQ error while handling service '{}': {}",
+               service_name, e.what());
+    response.code = ResponseStatus::INVALID_REQUEST;
+  }
   catch (const std::exception &e)
   {
     zlc::error("[ServiceManager] Exception while handling service '{}': {}",
                service_name, e.what());
-    response.code = ResponseStatus::FAIL;
+    response.code = ResponseStatus::SERVICE_FAIL;
   }
 }
 
@@ -111,7 +124,7 @@ void ServiceManager::responseSocketThread()
     handleRequest(service_name, payload, response);
 
     // Send response frames
-    res_socket_.send(zmq::buffer(service_name), zmq::send_flags::sndmore);
+    res_socket_.send(zmq::buffer(response.code), zmq::send_flags::sndmore);
     res_socket_.send(zmq::buffer(response.payload), zmq::send_flags::none);
   }
 }
