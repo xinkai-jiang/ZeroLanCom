@@ -1,0 +1,44 @@
+{% set name = "zerolancom" %}
+{% set version = "1.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/<your_user>/<your_repo>/archive/v{{ version }}.tar.gz
+  sha256: <PLACE_YOUR_SHA256_HERE>
+
+build:
+  number: 0
+  run_exports:
+    - {{ pin_subpackage("zerolancom", max_pin='x.x') }}
+
+requirements:
+  build:
+    - {{ compiler('cxx') }}
+    - cmake
+    - make
+    - pkg-config
+  host:
+    - fmt
+    - spdlog
+    - zeromq
+  run:
+    - fmt
+    - spdlog
+    - zeromq
+
+test:
+  commands:
+    - test -f $PREFIX/include/zerolancom/zerolancom.hpp
+
+about:
+  home: https://github.com/<your_user>/<your_repo>
+  license: Apache-2.0
+  license_file: LICENSE
+  summary: 'A easy-to-use C++ library for ZeroLanCom communication.'
+
+extra:
+  recipe-maintainers:
+    - <xinkai-jiang>
