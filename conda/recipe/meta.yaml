@@ -7,11 +7,11 @@ package:
 
 source:
   url: https://github.com/xinkai-jiang/ZeroLanCom/archive/refs/tags/v{{ version }}.tar.gz
-  sha256: d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed
+  sha256: 46206f4f1a7602a1f863c35ff36a7821150506c4edc2c63463fd5a2fd60c9746
 
 build:
   number: 0
-  skip: true  # [windows]
+  skip: true  # [win]
   run_exports:
     - {{ pin_subpackage(name, max_pin="x.x") }}
 
@@ -25,12 +25,15 @@ requirements:
     - fmt
     - spdlog
     - zeromq
-    - msgpack-c
+    - cppzmq
+    - libboost-headers
+    - msgpack-cxx
   run:
     - fmt
     - spdlog
     - zeromq
-    - msgpack-c
+    - cppzmq
+    - msgpack-cxx
 
 test:
   commands:
