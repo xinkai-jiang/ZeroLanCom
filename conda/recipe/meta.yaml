@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://github.com/xinkai-jiang/ZeroLanCom/archive/refs/tags/v{{ version }}.tar.gz
-  sha256: <SHA256>
+  sha256: d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed
 
 build:
   number: 0
