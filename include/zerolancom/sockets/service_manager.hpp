@@ -2,8 +2,8 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -11,7 +11,9 @@
 
 #include "zerolancom/serialization/serializer.hpp"
 #include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/periodic_task.hpp"
 #include "zerolancom/utils/request_result.hpp"
+#include "zerolancom/utils/thread_pool.hpp"
 #include "zerolancom/utils/zmq_utils.hpp"
 
 namespace zlc
@@ -23,7 +25,8 @@ using ServiceCallback = std::function<Bytes(const ByteView &payload)>;
  * @brief ServiceManager handles incoming RPC service requests.
  *
  * Design notes:
- * - Owns a REP socket and a worker thread.
+ * - Uses ZMQ REP socket for request handling with PeriodicTask for polling.
+ * - All polling tasks use the shared ThreadPool from ZeroLanComNode.
  * - Template registerHandler functions must remain header-only.
  * - Non-template functions are implemented in service_manager.cpp.
  */
@@ -32,10 +35,10 @@ class ServiceManager
 public:
   int service_port{0};
 
-  explicit ServiceManager(const std::string &ip);
+  explicit ServiceManager(zmq::context_t &zmq_context, const std::string &ip);
   ~ServiceManager();
 
-  void start();
+  void start(ThreadPool &pool);
   void stop();
 
   /**
@@ -85,18 +88,22 @@ public:
   ServiceManager &operator=(ServiceManager &&) = default;
 
 private:
-  // Thread entry for handling service requests
-  void responseSocketThread();
+  // Poll once for incoming service requests
+  void pollOnce();
+
+  // Process a queued request (runs in thread pool)
+  void processRequest(const std::string &identity, const std::string &service_name,
+                      const ByteView &payload);
 
 private:
   std::unordered_map<std::string, std::function<Bytes(const ByteView &)>> handlers_;
 
-  bool is_running{false};
-
-  zmq::socket_t res_socket_;
+  zmq::socket_t
+      router_socket_; // REP socket for receiving requests and sending responses
   static constexpr int SOCKET_TIMEOUT_MS = 100;
 
-  std::thread service_thread_;
+  std::unique_ptr<PeriodicTask> poll_task_;
+  ThreadPool *pool_{nullptr}; // Reference to shared thread pool
 };
 
 } // namespace zlc

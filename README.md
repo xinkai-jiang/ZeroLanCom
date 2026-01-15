@@ -19,6 +19,7 @@ ZeroLanCom is header-only on the core logic and extremely easy to integrate into
 - 🧭 Node information sharing and discovery
 - 🧹 Header-only core (no separate compilation needed)
 - 📦 Simple API with clean async flow
+- 🔄 Lightweight ThreadPool for background task execution
 
 ## 🔧 Build & Install
 

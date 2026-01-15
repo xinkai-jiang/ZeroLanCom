@@ -2,18 +2,6 @@
 #include <string>
 #include <zmq.hpp>
 
-class ZmqContext
-{
-public:
-  static zmq::context_t &instance()
-  {
-    static zmq::context_t ctx{1};
-    return ctx;
-  }
-
-  ZmqContext() = delete;
-};
-
 inline int getBoundPort(zmq::socket_t &socket)
 {
   // fetch endpoint string using modern cppzmq API

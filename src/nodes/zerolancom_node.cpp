@@ -19,14 +19,18 @@ void ZeroLanComNode::init(const std::string &name, const std::string &ip,
 
 ZeroLanComNode::ZeroLanComNode(const std::string &name, const std::string &ip,
                                const std::string &group, int groupPort)
-    : localInfo(name, ip), mcastSender(group, groupPort, ip),
-      mcastReceiver(group, groupPort, ip), serviceManager(ip),
-      subscriberManager(nodesManager), running(true)
+    : localInfo(name, ip), nodesManager(), threadPool(0), zmq_context_(1),
+      serviceManager(zmq_context_, ip), subscriberManager(zmq_context_, nodesManager),
+      mcastSender(group, groupPort, ip), mcastReceiver(group, groupPort, ip),
+      running(true)
 {
-  mcastSender.start(localInfo);
-  mcastReceiver.start(nodesManager);
-  serviceManager.start();
-  subscriberManager.start();
+  // Start thread pool first (other components depend on it)
+  threadPool.start();
+
+  mcastSender.start(localInfo, threadPool);
+  mcastReceiver.start(nodesManager, threadPool);
+  serviceManager.start(threadPool);
+  subscriberManager.start(threadPool);
 }
 
 ZeroLanComNode::~ZeroLanComNode()
@@ -41,6 +45,7 @@ void ZeroLanComNode::stop()
   mcastReceiver.stop();
   serviceManager.stop();
   subscriberManager.stop();
+  threadPool.stop();
 }
 
 bool ZeroLanComNode::isRunning() const

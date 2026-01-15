@@ -1,9 +1,9 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -14,6 +14,8 @@
 #include "zerolancom/nodes/node_info_manager.hpp"
 #include "zerolancom/serialization/serializer.hpp"
 #include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/periodic_task.hpp"
+#include "zerolancom/utils/thread_pool.hpp"
 #include "zerolancom/utils/zmq_utils.hpp"
 
 namespace zlc
@@ -30,7 +32,8 @@ namespace zlc
 class SubscriberManager
 {
 public:
-  explicit SubscriberManager(NodeInfoManager &node_info_mgr);
+  explicit SubscriberManager(zmq::context_t &zmq_context,
+                             NodeInfoManager &node_info_mgr);
   ~SubscriberManager();
 
   /**
@@ -57,8 +60,7 @@ public:
       callback(msg);
     };
 
-    sub.socket =
-        std::make_unique<zmq::socket_t>(ZmqContext::instance(), zmq::socket_type::sub);
+    sub.socket = std::make_unique<zmq::socket_t>(zmq_context_, zmq::socket_type::sub);
     sub.socket->set(zmq::sockopt::subscribe, "");
     auto urls = findTopicURLs(topicName);
     for (const auto &url : urls)
@@ -88,8 +90,7 @@ public:
       (instance->*callback)(msg);
     };
 
-    sub.socket =
-        std::make_unique<zmq::socket_t>(ZmqContext::instance(), zmq::socket_type::sub);
+    sub.socket = std::make_unique<zmq::socket_t>(zmq_context_, zmq::socket_type::sub);
     sub.socket->set(zmq::sockopt::subscribe, "");
     auto urls = findTopicURLs(topicName);
     for (const auto &url : urls)
@@ -102,7 +103,7 @@ public:
   }
 
   // Start polling thread
-  void start();
+  void start(ThreadPool &pool);
 
   // Stop polling thread
   void stop();
@@ -114,8 +115,8 @@ private:
   // Find all publisher endpoints for a topic
   std::vector<std::string> findTopicURLs(const std::string &topicName);
 
-  // Poll loop running in a dedicated thread
-  void pollLoop();
+  // Poll once for incoming messages
+  void pollOnce();
 
 private:
   struct Subscriber
@@ -128,12 +129,12 @@ private:
 
 private:
   NodeInfoManager &node_info_mgr_;
+  zmq::context_t &zmq_context_;
 
   std::vector<Subscriber> subscribers_;
   std::mutex mutex_;
 
-  std::thread poll_thread_;
-  bool is_running_{false};
+  std::unique_ptr<PeriodicTask> poll_task_;
 };
 
 } // namespace zlc

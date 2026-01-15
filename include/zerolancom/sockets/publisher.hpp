@@ -40,8 +40,8 @@ public:
         with_local_namespace ? "lc.local." + topic_name : topic_name;
 
     // Create PUB socket
-    socket_ =
-        std::make_unique<zmq::socket_t>(ZmqContext::instance(), zmq::socket_type::pub);
+    socket_ = std::make_unique<zmq::socket_t>(
+        ZeroLanComNode::instance().getZmqContext(), zmq::socket_type::pub);
 
     // Bind to an ephemeral port
     const std::string address = ZeroLanComNode::instance().GetIP();

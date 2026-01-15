@@ -45,7 +45,8 @@ public:
                       ResponseType &response)
   {
     // Create a REQ socket for this request
-    zmq::socket_t req_socket(ZmqContext::instance(), zmq::socket_type::req);
+    zmq::socket_t req_socket(ZeroLanComNode::instance().getZmqContext(),
+                             zmq::socket_type::req);
 
     // Resolve service and connect
     connect(req_socket, service_name);
