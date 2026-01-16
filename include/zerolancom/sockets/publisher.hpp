@@ -78,7 +78,7 @@ public:
 
 private:
   // Owned PUB socket
-  std::unique_ptr<ZMQSocket> socket_;
+  ZMQSocket *socket_;
 
   // Bound port number
   int port_{0};

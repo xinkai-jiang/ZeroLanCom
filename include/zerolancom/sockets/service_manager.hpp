@@ -93,7 +93,7 @@ private:
 private:
   std::unordered_map<std::string, std::function<Bytes(const ByteView &)>> handlers_;
 
-  ZMQSocket* res_socket_;
+  ZMQSocket *res_socket_;
   static constexpr int SOCKET_TIMEOUT_MS = 100;
 
   std::unique_ptr<PeriodicTask> poll_task_;

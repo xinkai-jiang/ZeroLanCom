@@ -5,7 +5,7 @@
 #include <utility>
 
 namespace zlc
-{ 
+{
 template <typename T> class Singleton
 {
 public:
@@ -14,7 +14,19 @@ public:
   Singleton(Singleton &&) = delete;
   Singleton &operator=(Singleton &&) = delete;
 
-  static T *getInstancePtr()
+  static void destroy()
+  {
+    if (!unique_instance_)
+    {
+      delete instance_;
+      instance_ = nullptr;
+    }
+    else
+    {
+    }
+  }
+
+  static T *instancePtr()
   {
     if (!instance_)
     {
@@ -25,7 +37,7 @@ public:
 
   static T &instance()
   {
-    return *getInstancePtr();
+    return *instancePtr();
   }
 
   static bool isInitialized()
@@ -33,29 +45,29 @@ public:
     return instance_ != nullptr;
   }
 
-  static void init(std::unique_ptr<T> inst)
+  template <typename... Args> static void initManaged(Args &&...args)
   {
     if (instance_)
     {
       throw std::logic_error("Singleton already initialized.");
     }
-    unique_instance_ = std::move(inst);
+    unique_instance_ = std::make_unique<T>(std::forward<Args>(args)...);
     instance_ = unique_instance_.get();
   }
 
-  static void init(T *inst)
+  template <typename... Args> static void initExternal(Args &&...args)
   {
     if (instance_)
     {
       throw std::logic_error("Singleton already initialized.");
     }
-    instance_ = inst;
+    instance_ = new T(std::forward<Args>(args)...);
   }
 
 protected:
   Singleton() = default;
   ~Singleton() = default;
-  inline static T* instance_ = nullptr;
+  inline static T *instance_ = nullptr;
   inline static std::unique_ptr<T> unique_instance_ = nullptr;
 };
-}
+} // namespace zlc

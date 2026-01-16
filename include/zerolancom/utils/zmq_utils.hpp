@@ -1,8 +1,8 @@
 #pragma once
+#include "zerolancom/utils/singleton.hpp"
 #include <mutex>
 #include <string>
 #include <zmq.hpp>
-#include "zerolancom/utils/singleton.hpp"
 
 namespace zlc
 {
@@ -12,42 +12,43 @@ using ZMQSocket = zmq::socket_t;
 class ZMQContext : public Singleton<ZMQContext>
 {
 public:
-
-static ZMQSocket *createSocket(zmq::socket_type type)
+  ZMQContext() : context_(1)
   {
-    assert (instance_ != nullptr);
+  }
+  static ZMQSocket *createSocket(zmq::socket_type type)
+  {
+    assert(instance_ != nullptr);
     return instance_->_createSocket(type);
   }
 
-static ZMQSocket createTempSocket(zmq::socket_type type)
+  static ZMQSocket createTempSocket(zmq::socket_type type)
   {
-    assert (instance_ != nullptr);
+    assert(instance_ != nullptr);
     return ZMQSocket(instance_->context_, type);
+  }
+  ~ZMQContext()
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (auto &socket : sockets_)
+    {
+      socket->close();
+    }
+    context_.close();
   }
 
 private:
 
-ZMQContext() : context_(1){};
-~ZMQContext()
-{
-  std::lock_guard<std::mutex> lock(mutex_);
-  for (auto &socket : sockets_)
+  ZMQSocket *_createSocket(zmq::socket_type type)
   {
-    socket->close();
+    std::lock_guard<std::mutex> lock(mutex_);
+    sockets_.emplace_back(std::make_unique<ZMQSocket>(context_, type));
+    return sockets_.back().get();
   }
-  context_.close();
-}
-ZMQSocket *_createSocket(zmq::socket_type type)
-{
-  std::lock_guard<std::mutex> lock(mutex_);
-  sockets_.emplace_back(std::make_unique<ZMQSocket>(context_, type));
-  return sockets_.back().get();
-}
+
   std::mutex mutex_;
   zmq::context_t context_;
   std::vector<std::unique_ptr<ZMQSocket>> sockets_;
 };
-
 
 inline int getBoundPort(ZMQSocket &socket)
 {

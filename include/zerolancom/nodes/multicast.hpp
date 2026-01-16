@@ -15,36 +15,36 @@
 namespace zlc
 {
 
-class MulticastSender
+class MulticastSender : public Singleton<MulticastSender>
 {
 public:
-  MulticastSender(const std::string &group, int port, const std::string &localIP);
-  ~MulticastSender();
+MulticastSender(const std::string &group, int port, const std::string &localIP);
+~MulticastSender();
 
-  void start();
-  void stop();
+void start();
+void stop();
 
 private:
   void sendHeartbeat(const Bytes &msg);
   int sock_;
   sockaddr_in addr_{};
   std::unique_ptr<PeriodicTask> heartbeat_task_;
-  LocalNodeInfo* localInfo_;
+  LocalNodeInfo *localInfo_;
 };
 
-class MulticastReceiver
+class MulticastReceiver : public Singleton<MulticastReceiver>
 {
 public:
-  MulticastReceiver(const std::string &group, int port, const std::string &localIP);
-  ~MulticastReceiver();
+MulticastReceiver(const std::string &group, int port, const std::string &localIP);
+~MulticastReceiver();
 
-  void start();
-  void stop();
+void start();
+void stop();
 
 private:
   int sock_;
   std::unique_ptr<PeriodicTask> receive_task_;
-  NodeInfoManager* nodeManager_;
+  NodeInfoManager *nodeManager_;
 };
 
 } // namespace zlc

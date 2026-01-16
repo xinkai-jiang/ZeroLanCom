@@ -17,8 +17,9 @@ SubscriberManager::~SubscriberManager()
 
 void SubscriberManager::start()
 {
-  poll_task_ = std::make_unique<PeriodicTask>([this]() { this->pollOnce(); }, 100,
-                                              ThreadPool::instance()); // Poll every 100ms
+  poll_task_ =
+      std::make_unique<PeriodicTask>([this]() { this->pollOnce(); }, 100,
+                                     ThreadPool::instance()); // Poll every 100ms
 
   poll_task_->start();
 }
@@ -31,26 +32,26 @@ void SubscriberManager::stop()
   }
 }
 
-  void SubscriberManager::_registerTopicSubscriber(const std::string &topicName,
-                               const std::function<void(const ByteView &)> &callback)
+void SubscriberManager::_registerTopicSubscriber(
+    const std::string &topicName, const std::function<void(const ByteView &)> &callback)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  Subscriber sub;
+  sub.topicName = topicName;
+  sub.callback = callback;
+
+  sub.socket = ZMQContext::createSocket(zmq::socket_type::sub);
+  sub.socket->set(zmq::sockopt::subscribe, "");
+  auto urls = findTopicURLs(topicName);
+  for (const auto &url : urls)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    Subscriber sub;
-    sub.topicName = topicName;
-    sub.callback = callback;
-
-    sub.socket = ZMQContext::createSocket(zmq::socket_type::sub);
-    sub.socket->set(zmq::sockopt::subscribe, "");
-    auto urls = findTopicURLs(topicName);
-    for (const auto &url : urls)
-    {
-      sub.socket->connect(url);
-      zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
-      sub.publisherURLs.push_back(url);
-    }
-    subscribers_.push_back(std::move(sub));
+    sub.socket->connect(url);
+    zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
+    sub.publisherURLs.push_back(url);
   }
+  subscribers_.push_back(std::move(sub));
+}
 
 std::vector<std::string> SubscriberManager::findTopicURLs(const std::string &topicName)
 {

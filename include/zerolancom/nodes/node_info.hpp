@@ -45,11 +45,11 @@ struct NodeInfo
 class LocalNodeInfo : public Singleton<LocalNodeInfo>
 {
 public:
-  const UUID& nodeID;
   NodeInfo nodeInfo;
-  
+  const UUID &nodeID; // Reference to nodeInfo.nodeID
+
   LocalNodeInfo(const std::string &name, const std::string &ip);
-  
+
   Bytes createHeartbeat() const;
   void registerTopic(const std::string &name, uint16_t port);
   void registerServices(const std::string &name, uint16_t port);

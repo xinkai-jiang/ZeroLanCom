@@ -12,8 +12,7 @@ void init(const std::string &node_name, const std::string &ip_address)
 {
   Logger::init(false);
   Logger::setLevel(LogLevel::INFO);
-  ZeroLanComNode::init(std::make_unique<ZeroLanComNode>(node_name, ip_address,
-                                        "224.0.0.1", 7720));
+  ZeroLanComNode::initManaged(node_name, ip_address, "224.0.0.1", 7720);
 }
 
 void sleep(int ms)
@@ -43,7 +42,6 @@ void spin()
 void waitForService(const std::string &service_name, int max_wait_ms,
                     int check_interval_ms)
 {
-  auto &node = ZeroLanComNode::instance();
   int waited_ms = 0;
 
   while (waited_ms < max_wait_ms)

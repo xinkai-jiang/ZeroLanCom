@@ -47,8 +47,13 @@ public:
   void registerTopicSubscriber(const std::string &topicName,
                                void (*callback)(const MessageType &))
   {
-    _registerTopicSubscriber<MessageType>(topicName, [callback](const MessageType &msg)
-                                         { callback(msg); });
+    _registerTopicSubscriber(topicName,
+                             [callback](const ByteView &view)
+                             {
+                               MessageType msg;
+                               decode(view, msg);
+                               callback(msg);
+                             });
   }
 
   template <typename MessageType, typename ClassT>
@@ -56,9 +61,13 @@ public:
                                void (ClassT::*callback)(const MessageType &),
                                ClassT *instance)
   {
-    _registerTopicSubscriber<MessageType>(topicName,
-                                         [instance, callback](const MessageType &msg)
-                                         { (instance->*callback)(msg); });
+    _registerTopicSubscriber(topicName,
+                             [instance, callback](const ByteView &view)
+                             {
+                               MessageType msg;
+                               decode(view, msg);
+                               (instance->*callback)(msg);
+                             });
   }
 
   // Start polling thread
@@ -83,7 +92,7 @@ private:
     std::string topicName;
     std::vector<std::string> publisherURLs;
     std::function<void(const ByteView &)> callback;
-    ZMQSocket* socket;
+    ZMQSocket *socket;
   };
 
 private:
@@ -93,7 +102,7 @@ private:
   std::unique_ptr<PeriodicTask> poll_task_;
 
   void _registerTopicSubscriber(const std::string &topicName,
-                               const std::function<void(const ByteView &)> &callback);
+                                const std::function<void(const ByteView &)> &callback);
 };
 
 } // namespace zlc

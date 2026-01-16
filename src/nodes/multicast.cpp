@@ -28,7 +28,7 @@ MulticastSender::MulticastSender(const std::string &group, int port,
   addr_.sin_family = AF_INET;
   addr_.sin_port = htons(port);
   addr_.sin_addr.s_addr = inet_addr(group.c_str());
-  localInfo_ = LocalNodeInfo::getInstancePtr();
+  localInfo_ = LocalNodeInfo::instancePtr();
 }
 
 MulticastSender::~MulticastSender()
@@ -90,7 +90,7 @@ MulticastReceiver::MulticastReceiver(const std::string &group, int port,
   mreq.imr_interface.s_addr = inet_addr(localIP.c_str());
   setsockopt(sock_, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
 
-  nodeManager_ = NodeInfoManager::getInstancePtr();
+  nodeManager_ = NodeInfoManager::instancePtr();
 }
 
 MulticastReceiver::~MulticastReceiver()

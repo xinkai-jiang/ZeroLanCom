@@ -21,24 +21,14 @@ namespace zlc
 class ZeroLanComNode : public Singleton<ZeroLanComNode>
 {
 public:
-  ZeroLanComNode(const std::string &name, const std::string &ip, const std::string &group, int groupPort);
+  ZeroLanComNode(const std::string &name, const std::string &ip,
+                 const std::string &group, int groupPort);
   ~ZeroLanComNode();
 
   void stop();
   bool isRunning() const;
 
-  const std::string &GetIP() const;
-
-  
-  private:
-  ThreadPool* threadPool_;
-  ZMQContext* zmqContext_;
-  LocalNodeInfo* localInfo_;
-  NodeInfoManager* nodesManager_;
-  MulticastSender* mcastSender_;
-  MulticastReceiver* mcastReceiver_;
-  ServiceManager* serviceManager_;
-  SubscriberManager* subscriberManager_;
+private:
   bool running;
 };
 
