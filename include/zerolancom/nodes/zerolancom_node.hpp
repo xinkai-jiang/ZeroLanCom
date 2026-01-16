@@ -21,45 +21,24 @@ namespace zlc
 class ZeroLanComNode : public Singleton<ZeroLanComNode>
 {
 public:
+  ZeroLanComNode(const std::string &name, const std::string &ip, const std::string &group, int groupPort);
   ~ZeroLanComNode();
-  static void init(const std::string &name, const std::string &ip,
-                   const std::string &group, int groupPort);
 
   void stop();
   bool isRunning() const;
 
-  void registerTopic(const std::string &topic_name, int port);
   const std::string &GetIP() const;
 
-  ThreadPool &getThreadPool()
-  {
-    return threadPool;
-  }
-
-  zmq::context_t &getZmqContext()
-  {
-    return zmq_context_;
-  }
-
-  LocalNodeInfo localInfo;
-  NodeInfoManager nodesManager;
-  ThreadPool threadPool;
-
-private:
-  ZeroLanComNode(const std::string &name, const std::string &ip,
-                 const std::string &group, int groupPort);
-
-  // ZMQ context must be declared BEFORE ServiceManager and SubscriberManager
-  // because members are initialized in declaration order
-  zmq::context_t zmq_context_;
-
-public:
-  ServiceManager serviceManager;
-  SubscriberManager subscriberManager;
-
-private:
-  MulticastSender mcastSender;
-  MulticastReceiver mcastReceiver;
+  
+  private:
+  ThreadPool* threadPool_;
+  ZMQContext* zmqContext_;
+  LocalNodeInfo* localInfo_;
+  NodeInfoManager* nodesManager_;
+  MulticastSender* mcastSender_;
+  MulticastReceiver* mcastReceiver_;
+  ServiceManager* serviceManager_;
+  SubscriberManager* subscriberManager_;
   bool running;
 };
 

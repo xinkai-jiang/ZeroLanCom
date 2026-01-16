@@ -4,12 +4,12 @@
 namespace zlc
 {
 
-ServiceManager::ServiceManager(zmq::context_t &zmq_context, const std::string &ip)
-    : router_socket_(zmq_context, zmq::socket_type::rep)
+ServiceManager::ServiceManager(const std::string &ip)
 {
-  router_socket_.set(zmq::sockopt::rcvtimeo, SOCKET_TIMEOUT_MS);
-  router_socket_.bind("tcp://" + ip + ":0");
-  service_port = getBoundPort(router_socket_);
+  res_socket_ = ZMQContext::createSocket(zmq::socket_type::rep);
+  res_socket_->set(zmq::sockopt::rcvtimeo, SOCKET_TIMEOUT_MS);
+  res_socket_->bind("tcp://" + ip + ":0");
+  service_port = getBoundPort(*res_socket_);
 
   zlc::info("[ServiceManager] ServiceManager bound to port {}", service_port);
 }
@@ -17,13 +17,12 @@ ServiceManager::ServiceManager(zmq::context_t &zmq_context, const std::string &i
 ServiceManager::~ServiceManager()
 {
   stop();
-  router_socket_.close();
 }
 
-void ServiceManager::start(ThreadPool &pool)
+void ServiceManager::start()
 {
   poll_task_ = std::make_unique<PeriodicTask>([this]() { this->pollOnce(); }, 100,
-                                              pool); // Poll every 100ms
+                                              ThreadPool::instance()); // Poll every 100ms
 
   poll_task_->start();
 }
@@ -85,25 +84,13 @@ void ServiceManager::removeHandler(const std::string &name)
   handlers_.erase(name);
 }
 
-void ServiceManager::processRequest(const std::string &identity,
-                                    const std::string &service_name,
-                                    const ByteView &payload)
-{
-  Response response;
-  handleRequest(service_name, payload, response);
-
-  // Send response back via REP socket
-  router_socket_.send(zmq::buffer(response.code), zmq::send_flags::sndmore);
-  router_socket_.send(zmq::buffer(response.payload), zmq::send_flags::none);
-}
-
 void ServiceManager::pollOnce()
 {
   try
   {
     zmq::message_t service_name_msg;
 
-    if (!router_socket_.recv(service_name_msg, zmq::recv_flags::none))
+    if (!res_socket_->recv(service_name_msg, zmq::recv_flags::none))
     {
       return;
     }
@@ -119,7 +106,7 @@ void ServiceManager::pollOnce()
     }
 
     zmq::message_t payload_msg;
-    if (!router_socket_.recv(payload_msg, zmq::recv_flags::none))
+    if (!res_socket_->recv(payload_msg, zmq::recv_flags::none))
     {
       return;
     }
@@ -136,8 +123,8 @@ void ServiceManager::pollOnce()
     handleRequest(service_name, payload, response);
 
     // Send response frames
-    router_socket_.send(zmq::buffer(response.code), zmq::send_flags::sndmore);
-    router_socket_.send(zmq::buffer(response.payload), zmq::send_flags::none);
+    res_socket_->send(zmq::buffer(response.code), zmq::send_flags::sndmore);
+    res_socket_->send(zmq::buffer(response.payload), zmq::send_flags::none);
   }
   catch (const zmq::error_t &e)
   {

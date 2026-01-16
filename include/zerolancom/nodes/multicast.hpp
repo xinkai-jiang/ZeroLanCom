@@ -21,17 +21,15 @@ public:
   MulticastSender(const std::string &group, int port, const std::string &localIP);
   ~MulticastSender();
 
-  void start(const LocalNodeInfo &localInfo, ThreadPool &pool);
+  void start();
   void stop();
 
 private:
   void sendHeartbeat(const Bytes &msg);
-
-private:
   int sock_;
   sockaddr_in addr_{};
-
   std::unique_ptr<PeriodicTask> heartbeat_task_;
+  LocalNodeInfo* localInfo_;
 };
 
 class MulticastReceiver
@@ -40,12 +38,13 @@ public:
   MulticastReceiver(const std::string &group, int port, const std::string &localIP);
   ~MulticastReceiver();
 
-  void start(NodeInfoManager &nodeManager, ThreadPool &pool);
+  void start();
   void stop();
 
 private:
   int sock_;
   std::unique_ptr<PeriodicTask> receive_task_;
+  NodeInfoManager* nodeManager_;
 };
 
 } // namespace zlc

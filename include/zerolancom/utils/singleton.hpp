@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <utility>
 
+namespace zlc
+{ 
 template <typename T> class Singleton
 {
 public:
@@ -12,13 +14,18 @@ public:
   Singleton(Singleton &&) = delete;
   Singleton &operator=(Singleton &&) = delete;
 
-  static T &instance()
+  static T *getInstancePtr()
   {
     if (!instance_)
     {
       throw std::logic_error("Singleton not initialized. Call init() first.");
     }
-    return *instance_;
+    return instance_;
+  }
+
+  static T &instance()
+  {
+    return *getInstancePtr();
   }
 
   static bool isInitialized()
@@ -32,11 +39,23 @@ public:
     {
       throw std::logic_error("Singleton already initialized.");
     }
-    instance_ = std::move(inst);
+    unique_instance_ = std::move(inst);
+    instance_ = unique_instance_.get();
+  }
+
+  static void init(T *inst)
+  {
+    if (instance_)
+    {
+      throw std::logic_error("Singleton already initialized.");
+    }
+    instance_ = inst;
   }
 
 protected:
   Singleton() = default;
   ~Singleton() = default;
-  inline static std::unique_ptr<T> instance_ = nullptr;
+  inline static T* instance_ = nullptr;
+  inline static std::unique_ptr<T> unique_instance_ = nullptr;
 };
+}

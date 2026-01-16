@@ -90,9 +90,9 @@ void NodeInfo::printNodeInfo() const
 
 /* ================= LocalNodeInfo ================= */
 
-LocalNodeInfo::LocalNodeInfo(const std::string &name, const std::string &ip)
+LocalNodeInfo::LocalNodeInfo(const std::string &name, const std::string &ip) : 
+  nodeID(generateUUID())
 {
-  nodeID = generateUUID();
   nodeInfo.nodeID = nodeID;
   nodeInfo.infoID = 0;
   nodeInfo.name = name;

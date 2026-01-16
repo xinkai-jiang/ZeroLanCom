@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "zerolancom/utils/logger.hpp"
-
+#include "zerolancom/utils/singleton.hpp"
 namespace zlc
 {
 
@@ -30,7 +30,7 @@ namespace zlc
  * - Thread-safe task enqueueing
  * - Optional task result handling via callbacks
  */
-class ThreadPool
+class ThreadPool : public Singleton<ThreadPool>
 {
 public:
   using Task = std::function<void()>;

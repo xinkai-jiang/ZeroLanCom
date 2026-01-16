@@ -6,7 +6,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
 #include <zmq.hpp>
 
 #include "zerolancom/serialization/serializer.hpp"
@@ -30,15 +29,15 @@ using ServiceCallback = std::function<Bytes(const ByteView &payload)>;
  * - Template registerHandler functions must remain header-only.
  * - Non-template functions are implemented in service_manager.cpp.
  */
-class ServiceManager
+class ServiceManager : public Singleton<ServiceManager>
 {
 public:
   int service_port{0};
 
-  explicit ServiceManager(zmq::context_t &zmq_context, const std::string &ip);
+  explicit ServiceManager(const std::string &ip);
   ~ServiceManager();
 
-  void start(ThreadPool &pool);
+  void start();
   void stop();
 
   /**
@@ -91,19 +90,13 @@ private:
   // Poll once for incoming service requests
   void pollOnce();
 
-  // Process a queued request (runs in thread pool)
-  void processRequest(const std::string &identity, const std::string &service_name,
-                      const ByteView &payload);
-
 private:
   std::unordered_map<std::string, std::function<Bytes(const ByteView &)>> handlers_;
 
-  zmq::socket_t
-      router_socket_; // REP socket for receiving requests and sending responses
+  ZMQSocket* res_socket_;
   static constexpr int SOCKET_TIMEOUT_MS = 100;
 
   std::unique_ptr<PeriodicTask> poll_task_;
-  ThreadPool *pool_{nullptr}; // Reference to shared thread pool
 };
 
 } // namespace zlc

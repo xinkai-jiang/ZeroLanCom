@@ -1,4 +1,5 @@
 #include "zerolancom/zerolancom.hpp"
+#include "zerolancom/nodes/zerolancom_node.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -11,8 +12,8 @@ void init(const std::string &node_name, const std::string &ip_address)
 {
   Logger::init(false);
   Logger::setLevel(LogLevel::INFO);
-
-  ZeroLanComNode::init(node_name, ip_address, "224.0.0.1", 7720);
+  ZeroLanComNode::init(std::make_unique<ZeroLanComNode>(node_name, ip_address,
+                                        "224.0.0.1", 7720));
 }
 
 void sleep(int ms)
@@ -22,7 +23,7 @@ void sleep(int ms)
 
 void spin()
 {
-  auto &node = zlc::ZeroLanComNode::instance();
+  auto &node = ZeroLanComNode::instance();
 
   try
   {
@@ -47,7 +48,7 @@ void waitForService(const std::string &service_name, int max_wait_ms,
 
   while (waited_ms < max_wait_ms)
   {
-    auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
+    auto serviceInfoPtr = NodeInfoManager::instance().getServiceInfo(service_name);
     if (serviceInfoPtr != nullptr)
     {
       zlc::info("[Client] Service '{}' is now available.", service_name);

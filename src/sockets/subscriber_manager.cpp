@@ -3,12 +3,10 @@
 namespace zlc
 {
 
-SubscriberManager::SubscriberManager(zmq::context_t &zmq_context,
-                                     NodeInfoManager &node_info_mgr)
-    : node_info_mgr_(node_info_mgr), zmq_context_(zmq_context)
+SubscriberManager::SubscriberManager()
 {
-  // Register callback to receive node/topic updates
-  node_info_mgr_.registerUpdateCallback(std::bind(
+  // Subscribe to node/topic updates
+  NodeInfoManager::instance().node_update_event.subscribe(std::bind(
       &SubscriberManager::updateTopicSubscriber, this, std::placeholders::_1));
 }
 
@@ -17,10 +15,10 @@ SubscriberManager::~SubscriberManager()
   stop();
 }
 
-void SubscriberManager::start(ThreadPool &pool)
+void SubscriberManager::start()
 {
   poll_task_ = std::make_unique<PeriodicTask>([this]() { this->pollOnce(); }, 100,
-                                              pool); // Poll every 100ms
+                                              ThreadPool::instance()); // Poll every 100ms
 
   poll_task_->start();
 }
@@ -33,11 +31,32 @@ void SubscriberManager::stop()
   }
 }
 
+  void SubscriberManager::_registerTopicSubscriber(const std::string &topicName,
+                               const std::function<void(const ByteView &)> &callback)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    Subscriber sub;
+    sub.topicName = topicName;
+    sub.callback = callback;
+
+    sub.socket = ZMQContext::createSocket(zmq::socket_type::sub);
+    sub.socket->set(zmq::sockopt::subscribe, "");
+    auto urls = findTopicURLs(topicName);
+    for (const auto &url : urls)
+    {
+      sub.socket->connect(url);
+      zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
+      sub.publisherURLs.push_back(url);
+    }
+    subscribers_.push_back(std::move(sub));
+  }
+
 std::vector<std::string> SubscriberManager::findTopicURLs(const std::string &topicName)
 {
   std::vector<std::string> urls;
 
-  auto infos = node_info_mgr_.getPublisherInfo(topicName);
+  auto infos = NodeInfoManager::instance().getPublisherInfo(topicName);
 
   for (const auto &t : infos)
   {
@@ -88,7 +107,7 @@ void SubscriberManager::pollOnce()
 
       for (auto &sub : subscribers_)
       {
-        poll_items.push_back({static_cast<void *>(*sub.socket), 0, ZMQ_POLLIN, 0});
+        poll_items.push_back({sub.socket->handle(), 0, ZMQ_POLLIN, 0});
         subs.push_back(&sub);
       }
     }

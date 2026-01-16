@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -29,11 +30,10 @@ namespace zlc
  * - Uses one SUB socket per topic.
  * - Template subscription API must remain header-only.
  */
-class SubscriberManager
+class SubscriberManager : public Singleton<SubscriberManager>
 {
 public:
-  explicit SubscriberManager(zmq::context_t &zmq_context,
-                             NodeInfoManager &node_info_mgr);
+  explicit SubscriberManager();
   ~SubscriberManager();
 
   /**
@@ -47,29 +47,8 @@ public:
   void registerTopicSubscriber(const std::string &topicName,
                                void (*callback)(const MessageType &))
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    Subscriber sub;
-    sub.topicName = topicName;
-
-    // Wrap typed callback into raw ByteView callback
-    sub.callback = [callback](const ByteView &view)
-    {
-      MessageType msg;
-      decode(view, msg);
-      callback(msg);
-    };
-
-    sub.socket = std::make_unique<zmq::socket_t>(zmq_context_, zmq::socket_type::sub);
-    sub.socket->set(zmq::sockopt::subscribe, "");
-    auto urls = findTopicURLs(topicName);
-    for (const auto &url : urls)
-    {
-      sub.socket->connect(url);
-      zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
-      sub.publisherURLs.push_back(url);
-    }
-    subscribers_.push_back(std::move(sub));
+    _registerTopicSubscriber<MessageType>(topicName, [callback](const MessageType &msg)
+                                         { callback(msg); });
   }
 
   template <typename MessageType, typename ClassT>
@@ -77,33 +56,13 @@ public:
                                void (ClassT::*callback)(const MessageType &),
                                ClassT *instance)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    Subscriber sub;
-    sub.topicName = topicName;
-
-    // Wrap typed callback into raw ByteView callback
-    sub.callback = [callback, instance](const ByteView &view)
-    {
-      MessageType msg;
-      decode(view, msg);
-      (instance->*callback)(msg);
-    };
-
-    sub.socket = std::make_unique<zmq::socket_t>(zmq_context_, zmq::socket_type::sub);
-    sub.socket->set(zmq::sockopt::subscribe, "");
-    auto urls = findTopicURLs(topicName);
-    for (const auto &url : urls)
-    {
-      sub.socket->connect(url);
-      zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
-      sub.publisherURLs.push_back(url);
-    }
-    subscribers_.push_back(std::move(sub));
+    _registerTopicSubscriber<MessageType>(topicName,
+                                         [instance, callback](const MessageType &msg)
+                                         { (instance->*callback)(msg); });
   }
 
   // Start polling thread
-  void start(ThreadPool &pool);
+  void start();
 
   // Stop polling thread
   void stop();
@@ -124,17 +83,17 @@ private:
     std::string topicName;
     std::vector<std::string> publisherURLs;
     std::function<void(const ByteView &)> callback;
-    std::unique_ptr<zmq::socket_t> socket;
+    ZMQSocket* socket;
   };
 
 private:
-  NodeInfoManager &node_info_mgr_;
-  zmq::context_t &zmq_context_;
-
   std::vector<Subscriber> subscribers_;
   std::mutex mutex_;
 
   std::unique_ptr<PeriodicTask> poll_task_;
+
+  void _registerTopicSubscriber(const std::string &topicName,
+                               const std::function<void(const ByteView &)> &callback);
 };
 
 } // namespace zlc

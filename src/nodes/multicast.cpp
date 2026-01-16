@@ -28,6 +28,7 @@ MulticastSender::MulticastSender(const std::string &group, int port,
   addr_.sin_family = AF_INET;
   addr_.sin_port = htons(port);
   addr_.sin_addr.s_addr = inet_addr(group.c_str());
+  localInfo_ = LocalNodeInfo::getInstancePtr();
 }
 
 MulticastSender::~MulticastSender()
@@ -39,15 +40,15 @@ MulticastSender::~MulticastSender()
   }
 }
 
-void MulticastSender::start(const LocalNodeInfo &localInfo, ThreadPool &pool)
+void MulticastSender::start()
 {
   heartbeat_task_ = std::make_unique<PeriodicTask>(
-      [this, &localInfo]()
+      [this]()
       {
-        auto msg = localInfo.createHeartbeat();
+        auto msg = localInfo_->createHeartbeat();
         this->sendHeartbeat(msg);
       },
-      1000, pool);
+      1000, ThreadPool::instance()); // Send every 1000ms
 
   heartbeat_task_->start();
 }
@@ -88,6 +89,8 @@ MulticastReceiver::MulticastReceiver(const std::string &group, int port,
   mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
   mreq.imr_interface.s_addr = inet_addr(localIP.c_str());
   setsockopt(sock_, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+
+  nodeManager_ = NodeInfoManager::getInstancePtr();
 }
 
 MulticastReceiver::~MulticastReceiver()
@@ -99,10 +102,10 @@ MulticastReceiver::~MulticastReceiver()
   }
 }
 
-void MulticastReceiver::start(NodeInfoManager &nodeManager, ThreadPool &pool)
+void MulticastReceiver::start()
 {
   receive_task_ = std::make_unique<PeriodicTask>(
-      [this, &nodeManager]()
+      [this]()
       {
         Bytes buf(1024);
         sockaddr_in src{};
@@ -120,8 +123,8 @@ void MulticastReceiver::start(NodeInfoManager &nodeManager, ThreadPool &pool)
           NodeInfo info =
               NodeInfo::decode(ByteView{buf.data(), static_cast<size_t>(n)});
           info.ip = ip;
-          nodeManager.processHeartbeat(info);
-          nodeManager.checkHeartbeats();
+          nodeManager_->processHeartbeat(info);
+          nodeManager_->checkHeartbeats();
         }
         catch (const NodeInfoDecodeException &e)
         {
@@ -133,7 +136,7 @@ void MulticastReceiver::start(NodeInfoManager &nodeManager, ThreadPool &pool)
           std::cerr << e.what() << '\n';
         }
       },
-      100, pool); // Poll every 100ms
+      100, ThreadPool::instance()); // Poll every 100ms
 
   receive_task_->start();
 }
