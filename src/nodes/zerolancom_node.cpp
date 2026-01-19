@@ -33,7 +33,7 @@ ZeroLanComNode::~ZeroLanComNode()
 void ZeroLanComNode::stop()
 {
   running = false;
-  
+
   MulticastSender::instance().stop();
   MulticastReceiver::instance().stop();
   ServiceManager::instance().stop();

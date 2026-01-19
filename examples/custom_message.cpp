@@ -11,7 +11,8 @@ struct CustomMessage
 
 void topicCallback(const CustomMessage &msg)
 {
-  zlc::info("Received message on subscribed topic: count={}, name={}, data size={}", msg.count, msg.name, msg.data.size());
+  zlc::info("Received message on subscribed topic: count={}, name={}, data size={}",
+            msg.count, msg.name, msg.data.size());
 }
 
 int main()

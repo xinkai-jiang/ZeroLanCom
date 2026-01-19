@@ -155,6 +155,3 @@ See [examples/custom_message.cpp](../../examples/custom_message.cpp) for details
 
 Install on Ubuntu: `sudo apt install libzmq3-dev libspdlog-dev`
 
-## Python Bindings
-
-[python/lancom_pybind.cpp](../../python/lancom_pybind.cpp) provides PyBind11 wrapper. Build via `cmake` with Python detection enabled; generates shared library importable as `import zerolancom`.

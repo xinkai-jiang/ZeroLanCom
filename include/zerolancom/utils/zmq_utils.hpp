@@ -37,7 +37,6 @@ public:
   }
 
 private:
-
   ZMQSocket *_createSocket(zmq::socket_type type)
   {
     std::lock_guard<std::mutex> lock(mutex_);

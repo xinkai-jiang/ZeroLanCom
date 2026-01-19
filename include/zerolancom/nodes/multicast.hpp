@@ -18,11 +18,11 @@ namespace zlc
 class MulticastSender : public Singleton<MulticastSender>
 {
 public:
-MulticastSender(const std::string &group, int port, const std::string &localIP);
-~MulticastSender();
+  MulticastSender(const std::string &group, int port, const std::string &localIP);
+  ~MulticastSender();
 
-void start();
-void stop();
+  void start();
+  void stop();
 
 private:
   void sendHeartbeat(const Bytes &msg);
@@ -35,11 +35,11 @@ private:
 class MulticastReceiver : public Singleton<MulticastReceiver>
 {
 public:
-MulticastReceiver(const std::string &group, int port, const std::string &localIP);
-~MulticastReceiver();
+  MulticastReceiver(const std::string &group, int port, const std::string &localIP);
+  ~MulticastReceiver();
 
-void start();
-void stop();
+  void start();
+  void stop();
 
 private:
   int sock_;

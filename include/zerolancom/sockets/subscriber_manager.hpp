@@ -79,6 +79,9 @@ public:
   // Called by NodeInfoManager when a node announces new topics
   void updateTopicSubscriber(const NodeInfo &nodeInfo);
 
+  // Called by NodeInfoManager when a node is removed
+  void removeTopicSubscriber(const NodeInfo &nodeInfo);
+
 private:
   // Find all publisher endpoints for a topic
   std::vector<std::string> findTopicURLs(const std::string &topicName);

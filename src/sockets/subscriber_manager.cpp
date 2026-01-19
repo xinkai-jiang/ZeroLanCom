@@ -8,6 +8,10 @@ SubscriberManager::SubscriberManager()
   // Subscribe to node/topic updates
   NodeInfoManager::instance().node_update_event.subscribe(std::bind(
       &SubscriberManager::updateTopicSubscriber, this, std::placeholders::_1));
+
+  // Subscribe to node removal events
+  NodeInfoManager::instance().node_remove_event.subscribe(std::bind(
+      &SubscriberManager::removeTopicSubscriber, this, std::placeholders::_1));
 }
 
 SubscriberManager::~SubscriberManager()
@@ -90,6 +94,33 @@ void SubscriberManager::updateTopicSubscriber(const NodeInfo &nodeInfo)
       sub.publisherURLs.push_back(url);
 
       zlc::info("[SubscriberManager] '{}' connected to {}", topic.name, url);
+    }
+  }
+}
+
+void SubscriberManager::removeTopicSubscriber(const NodeInfo &nodeInfo)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  for (const auto &topic : nodeInfo.topics)
+  {
+    for (auto &sub : subscribers_)
+    {
+      if (sub.topicName != topic.name)
+        continue;
+
+      std::string url = fmt::format("tcp://{}:{}", topic.ip, topic.port);
+
+      auto it = std::find(sub.publisherURLs.begin(), sub.publisherURLs.end(), url);
+      if (it == sub.publisherURLs.end())
+      {
+        continue; // not connected to this publisher
+      }
+
+      sub.socket->disconnect(url);
+      sub.publisherURLs.erase(it);
+
+      zlc::info("[SubscriberManager] '{}' disconnected from {}", topic.name, url);
     }
   }
 }

@@ -207,13 +207,16 @@ TEST(ThreadPoolTest, DestructorStopsPool)
 
 TEST(PeriodicTaskTest, ExecutesPeriodically)
 {
+  ThreadPool pool(2);
+  pool.start();
   int counter = 0;
 
-  PeriodicTask task([&counter]() { counter++; }, 50);
+  PeriodicTask task([&counter]() { counter++; }, 50, pool);
   task.start();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(250));
   task.stop();
+  pool.stop();
 
   // Should execute approximately 5 times (250ms / 50ms)
   // Allow range due to timing variations
@@ -223,9 +226,11 @@ TEST(PeriodicTaskTest, ExecutesPeriodically)
 
 TEST(PeriodicTaskTest, StopPreventsExecution)
 {
+  ThreadPool pool(2);
+  pool.start();
   int counter = 0;
 
-  PeriodicTask task([&counter]() { counter++; }, 50);
+  PeriodicTask task([&counter]() { counter++; }, 50, pool);
   task.start();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -234,6 +239,7 @@ TEST(PeriodicTaskTest, StopPreventsExecution)
   int count_at_stop = counter;
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  pool.stop();
 
   // Should not have increased
   EXPECT_EQ(counter, count_at_stop);
@@ -246,7 +252,7 @@ TEST(PeriodicTaskTest, WithThreadPool)
 
   int counter = 0;
 
-  PeriodicTask task([&counter]() { counter++; }, 50, &pool);
+  PeriodicTask task([&counter]() { counter++; }, 50, pool);
   task.start();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -259,6 +265,8 @@ TEST(PeriodicTaskTest, WithThreadPool)
 
 TEST(PeriodicTaskTest, ExceptionInCallbackIsHandled)
 {
+  ThreadPool pool(2);
+  pool.start();
   int counter = 0;
   int exceptions = 0;
 
@@ -272,12 +280,13 @@ TEST(PeriodicTaskTest, ExceptionInCallbackIsHandled)
         }
         counter++;
       },
-      50);
+      50, pool);
 
   task.start();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
   task.stop();
+  pool.stop();
 
   // Should have handled exceptions and continued
   EXPECT_GT(exceptions, 0);
@@ -285,7 +294,9 @@ TEST(PeriodicTaskTest, ExceptionInCallbackIsHandled)
 
 TEST(PeriodicTaskTest, IsRunning)
 {
-  PeriodicTask task([]() {}, 100);
+  ThreadPool pool(2);
+  pool.start();
+  PeriodicTask task([]() {}, 100, pool);
 
   EXPECT_FALSE(task.is_running());
 
@@ -294,14 +305,17 @@ TEST(PeriodicTaskTest, IsRunning)
 
   task.stop();
   EXPECT_FALSE(task.is_running());
+  pool.stop();
 }
 
 TEST(PeriodicTaskTest, DestructorStopsTask)
 {
+  ThreadPool pool(2);
+  pool.start();
   int counter = 0;
 
   {
-    PeriodicTask task([&counter]() { counter++; }, 50);
+    PeriodicTask task([&counter]() { counter++; }, 50, pool);
     task.start();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -310,6 +324,7 @@ TEST(PeriodicTaskTest, DestructorStopsTask)
   int count_at_destroy = counter;
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  pool.stop();
 
   // Should not have increased after destruction
   EXPECT_EQ(counter, count_at_destroy);
