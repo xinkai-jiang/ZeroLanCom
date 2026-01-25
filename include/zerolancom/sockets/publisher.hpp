@@ -5,7 +5,7 @@
 
 #include <zmq.hpp>
 
-#include "zerolancom/nodes/zerolancom_node.hpp"
+#include "zerolancom/nodes/node_info.hpp"
 #include "zerolancom/serialization/serializer.hpp"
 #include "zerolancom/utils/logger.hpp"
 #include "zerolancom/utils/zmq_utils.hpp"
@@ -40,11 +40,10 @@ public:
         with_local_namespace ? "lc.local." + topic_name : topic_name;
 
     // Create PUB socket
-    socket_ =
-        std::make_unique<zmq::socket_t>(ZmqContext::instance(), zmq::socket_type::pub);
+    socket_ = ZMQContext::createSocket(zmq::socket_type::pub);
 
     // Bind to an ephemeral port
-    const std::string address = ZeroLanComNode::instance().GetIP();
+    const std::string address = LocalNodeInfo::instance().nodeInfo.ip;
 
     socket_->bind("tcp://" + address + ":0");
 
@@ -55,8 +54,8 @@ public:
               port_);
 
     // Register topic in node discovery
-    ZeroLanComNode::instance().registerTopic(full_topic_name,
-                                             static_cast<uint16_t>(port_));
+    LocalNodeInfo::instance().registerTopic(full_topic_name,
+                                            static_cast<uint16_t>(port_));
   }
 
   // Destructor
@@ -79,7 +78,7 @@ public:
 
 private:
   // Owned PUB socket
-  std::unique_ptr<zmq::socket_t> socket_;
+  ZMQSocket *socket_;
 
   // Bound port number
   int port_{0};

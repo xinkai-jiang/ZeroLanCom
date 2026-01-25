@@ -33,13 +33,6 @@ bool NodeInfoManager::checkNodeInfoIDUnlocked(const std::string &nodeID,
 
 /* ================= public API ================= */
 
-void NodeInfoManager::registerUpdateCallback(
-    const std::function<void(const NodeInfo &)> &callback)
-{
-  std::unique_lock lock(callback_mutex_);
-  update_callback_.push_back(callback);
-}
-
 bool NodeInfoManager::checkNodeID(const std::string &nodeID) const
 {
   std::shared_lock lock(data_mutex_);
@@ -115,6 +108,7 @@ void NodeInfoManager::checkHeartbeats()
 
   for (const auto &nodeID : to_remove)
   {
+    node_remove_event.trigger(nodes_info_[nodeID]);
     nodes_info_.erase(nodeID);
     nodes_info_id_.erase(nodeID);
     nodes_heartbeat_.erase(nodeID);
@@ -156,11 +150,7 @@ void NodeInfoManager::processHeartbeat(const NodeInfo &nodeInfo)
 
     if (is_new || info_changed)
     {
-      std::shared_lock lock(callback_mutex_);
-      for (const auto &cb : update_callback_)
-      {
-        cb(nodeInfo);
-      }
+      node_update_event.trigger(nodeInfo);
     }
   }
   catch (const std::exception &e)

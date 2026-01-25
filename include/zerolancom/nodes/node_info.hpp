@@ -7,6 +7,7 @@
 
 #include "zerolancom/serialization/serializer.hpp"
 #include "zerolancom/utils/message.hpp"
+#include "zerolancom/utils/singleton.hpp"
 
 namespace zlc
 {
@@ -27,7 +28,7 @@ struct SocketInfo
 
 struct NodeInfo
 {
-  std::string nodeID; // 36-char UUID
+  UUID nodeID; // 36-char UUID
   uint32_t infoID;
   std::string name;
   std::string ip;
@@ -41,17 +42,20 @@ struct NodeInfo
 
 /* ================= LocalNodeInfo ================= */
 
-struct LocalNodeInfo
+class LocalNodeInfo : public Singleton<LocalNodeInfo>
 {
-  std::string nodeID;
+public:
   NodeInfo nodeInfo;
-  mutable std::mutex mutex_;
+  const UUID &nodeID; // Reference to nodeInfo.nodeID
 
   LocalNodeInfo(const std::string &name, const std::string &ip);
 
   Bytes createHeartbeat() const;
   void registerTopic(const std::string &name, uint16_t port);
   void registerServices(const std::string &name, uint16_t port);
+
+private:
+  mutable std::mutex mutex_;
 };
 
 } // namespace zlc

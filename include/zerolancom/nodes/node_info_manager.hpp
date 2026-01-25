@@ -9,11 +9,12 @@
 #include <vector>
 
 #include "zerolancom/nodes/node_info.hpp"
+#include "zerolancom/utils/event.hpp"
 
 namespace zlc
 {
 
-class NodeInfoManager
+class NodeInfoManager : public Singleton<NodeInfoManager>
 {
 private:
   // data
@@ -23,22 +24,18 @@ private:
   std::unordered_map<std::string, std::chrono::steady_clock::time_point>
       nodes_heartbeat_;
 
-  // callbacks
-  mutable std::shared_mutex callback_mutex_;
-  std::vector<std::function<void(const NodeInfo &)>> update_callback_;
-
-private:
   // internal helpers (require external locking)
   void updateNodeUnlocked(const std::string &nodeID, const NodeInfo &info);
   bool checkNodeIDUnlocked(const std::string &nodeID) const;
   bool checkNodeInfoIDUnlocked(const std::string &nodeID, uint32_t infoID) const;
 
 public:
-  void registerUpdateCallback(const std::function<void(const NodeInfo &)> &callback);
+  // event for node updates
+  Event<const NodeInfo &> node_update_event;
+  Event<const NodeInfo &> node_remove_event;
 
   bool checkNodeID(const std::string &nodeID) const;
   bool checkNodeInfoID(const std::string &nodeID, uint32_t infoID) const;
-
   void removeNode(const std::string &nodeID);
 
   std::vector<SocketInfo> getPublisherInfo(const std::string &topicName) const;

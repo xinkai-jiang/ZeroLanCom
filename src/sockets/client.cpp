@@ -1,17 +1,15 @@
 #include "zerolancom/sockets/client.hpp"
-
+#include "zerolancom/nodes/node_info_manager.hpp"
 #include <chrono>
 #include <thread>
 
 namespace zlc
 {
 
-void Client::connect(zmq::socket_t &socket, const std::string &service_name)
+void Client::connect(ZMQSocket &socket, const std::string &service_name)
 {
-  auto &node = ZeroLanComNode::instance();
-
   // Lookup service info from node discovery table
-  auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
+  auto serviceInfoPtr = NodeInfoManager::instance().getServiceInfo(service_name);
 
   if (serviceInfoPtr == nullptr)
   {
@@ -32,7 +30,7 @@ void Client::connect(zmq::socket_t &socket, const std::string &service_name)
 }
 
 void Client::sendRequest(const std::string &service_name, const ByteView &payload,
-                         zmq::socket_t &socket)
+                         ZMQSocket &socket)
 {
   // Send service name frame
   socket.send(zmq::buffer(service_name), zmq::send_flags::sndmore);
@@ -43,7 +41,7 @@ void Client::sendRequest(const std::string &service_name, const ByteView &payloa
   zlc::info("[Client] Sent request to service '{}'", service_name);
 }
 
-void Client::receiveResponse(zmq::socket_t &socket, zmq::message_t &payloadMsg,
+void Client::receiveResponse(ZMQSocket &socket, zmq::message_t &payloadMsg,
                              const std::string &service_name)
 {
   zmq::message_t statusMsg;

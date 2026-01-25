@@ -28,6 +28,7 @@ MulticastSender::MulticastSender(const std::string &group, int port,
   addr_.sin_family = AF_INET;
   addr_.sin_port = htons(port);
   addr_.sin_addr.s_addr = inet_addr(group.c_str());
+  localInfo_ = LocalNodeInfo::instancePtr();
 }
 
 MulticastSender::~MulticastSender()
@@ -39,27 +40,24 @@ MulticastSender::~MulticastSender()
   }
 }
 
-void MulticastSender::start(const LocalNodeInfo &localInfo)
+void MulticastSender::start()
 {
-  running_ = true;
-  multicastSendThread_ = std::thread(
-      [this, &localInfo]()
+  heartbeat_task_ = std::make_unique<PeriodicTask>(
+      [this]()
       {
-        while (running_)
-        {
-          auto msg = localInfo.createHeartbeat();
-          sendHeartbeat(msg);
-          std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-      });
+        auto msg = localInfo_->createHeartbeat();
+        this->sendHeartbeat(msg);
+      },
+      1000, ThreadPool::instance()); // Send every 1000ms
+
+  heartbeat_task_->start();
 }
 
 void MulticastSender::stop()
 {
-  running_ = false;
-  if (multicastSendThread_.joinable())
+  if (heartbeat_task_)
   {
-    multicastSendThread_.join();
+    heartbeat_task_->stop();
   }
 }
 
@@ -91,6 +89,8 @@ MulticastReceiver::MulticastReceiver(const std::string &group, int port,
   mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
   mreq.imr_interface.s_addr = inet_addr(localIP.c_str());
   setsockopt(sock_, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+
+  nodeManager_ = NodeInfoManager::instancePtr();
 }
 
 MulticastReceiver::~MulticastReceiver()
@@ -102,57 +102,50 @@ MulticastReceiver::~MulticastReceiver()
   }
 }
 
-void MulticastReceiver::start(NodeInfoManager &nodeManager)
+void MulticastReceiver::start()
 {
-  running_ = true;
-  multicastReceiveThread_ = std::thread(
-      [this, &nodeManager]()
+  receive_task_ = std::make_unique<PeriodicTask>(
+      [this]()
       {
         Bytes buf(1024);
         sockaddr_in src{};
         socklen_t slen = sizeof(src);
 
-        while (running_)
+        int n = recvfrom(sock_, buf.data(), static_cast<int>(buf.size()), 0,
+                         reinterpret_cast<sockaddr *>(&src), &slen);
+
+        if (n <= 0)
+          return;
+
+        std::string ip = inet_ntoa(src.sin_addr);
+        try
         {
-          int n = recvfrom(sock_, buf.data(), static_cast<int>(buf.size()), 0,
-                           reinterpret_cast<sockaddr *>(&src), &slen);
-
-          if (n <= 0)
-            continue;
-
-          std::string ip = inet_ntoa(src.sin_addr);
-          try
-          {
-            NodeInfo info =
-                NodeInfo::decode(ByteView{buf.data(), static_cast<size_t>(n)});
-            info.ip = ip;
-            nodeManager.processHeartbeat(info);
-            nodeManager.checkHeartbeats();
-          }
-          catch (const NodeInfoDecodeException &e)
-          {
-            warn("[MulticastReceiver] Failed to decode NodeInfo from {}: {}", ip,
-                 e.what());
-            continue;
-          }
-          catch (const std::exception &e)
-          {
-            std::cerr << e.what() << '\n';
-          }
-
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          NodeInfo info =
+              NodeInfo::decode(ByteView{buf.data(), static_cast<size_t>(n)});
+          info.ip = ip;
+          nodeManager_->processHeartbeat(info);
+          nodeManager_->checkHeartbeats();
         }
+        catch (const NodeInfoDecodeException &e)
+        {
+          warn("[MulticastReceiver] Failed to decode NodeInfo from {}: {}", ip,
+               e.what());
+        }
+        catch (const std::exception &e)
+        {
+          std::cerr << e.what() << '\n';
+        }
+      },
+      100, ThreadPool::instance()); // Poll every 100ms
 
-        zlc::info("Multicast receiver stopped.");
-      });
+  receive_task_->start();
 }
 
 void MulticastReceiver::stop()
 {
-  running_ = false;
-  if (multicastReceiveThread_.joinable())
+  if (receive_task_)
   {
-    multicastReceiveThread_.join();
+    receive_task_->stop();
   }
 }
 

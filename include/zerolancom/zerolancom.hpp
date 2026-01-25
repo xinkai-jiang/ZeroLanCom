@@ -4,8 +4,11 @@
 #include <string>
 
 // Core headers
+#include "zerolancom/nodes/node_info.hpp"
 #include "zerolancom/sockets/client.hpp"
 #include "zerolancom/sockets/publisher.hpp"
+#include "zerolancom/sockets/service_manager.hpp"
+#include "zerolancom/sockets/subscriber_manager.hpp"
 #include "zerolancom/utils/logger.hpp"
 
 namespace zlc
@@ -28,9 +31,8 @@ void waitForService(const std::string &service_name, int max_wait_ms = 1000,
 template <typename HandlerT>
 void registerServiceHandler(const std::string &service_name, HandlerT handler)
 {
-  auto &node = zlc::ZeroLanComNode::instance();
-  auto &localInfo = node.localInfo;
-  auto &serviceManager = node.serviceManager;
+  auto &localInfo = LocalNodeInfo::instance();
+  auto &serviceManager = ServiceManager::instance();
 
   serviceManager.registerHandler(service_name, std::function(handler));
   localInfo.registerServices(service_name, serviceManager.service_port);
@@ -43,18 +45,18 @@ template <typename HandlerT, typename ClassT>
 void registerServiceHandler(const std::string &service_name, HandlerT handler,
                             ClassT *instance)
 {
-  auto &node = zlc::ZeroLanComNode::instance();
+  auto &serviceManager = ServiceManager::instance();
 
-  node.serviceManager.registerHandler(service_name, handler, instance);
+  serviceManager.registerHandler(service_name, handler, instance);
 
-  uint16_t port = node.serviceManager.service_port;
-  node.localInfo.registerServices(service_name, port);
+  uint16_t port = serviceManager.service_port;
+  LocalNodeInfo::instance().registerServices(service_name, port);
 }
 
 template <typename HandlerT>
 void registerSubscriberHandler(const std::string &name, HandlerT callback)
 {
-  auto &subscriberManager = ZeroLanComNode::instance().subscriberManager;
+  auto &subscriberManager = SubscriberManager::instance();
   subscriberManager.registerTopicSubscriber(name, callback);
 }
 
@@ -62,7 +64,7 @@ template <typename HandlerT, typename ClassT>
 void registerSubscriberHandler(const std::string &name, HandlerT callback,
                                ClassT *instance)
 {
-  auto &subscriberManager = ZeroLanComNode::instance().subscriberManager;
+  auto &subscriberManager = SubscriberManager::instance();
   subscriberManager.registerTopicSubscriber(name, callback, instance);
 }
 
