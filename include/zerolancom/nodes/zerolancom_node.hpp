@@ -23,12 +23,15 @@ class ZeroLanComNode : public Singleton<ZeroLanComNode>
 public:
   ZeroLanComNode(const std::string &name, const std::string &ip,
                  const std::string &group, int groupPort);
+  ZeroLanComNode(const std::string &name, const std::string &ip,
+                 const std::string &group, int groupPort, const std::string &groupName);
   ~ZeroLanComNode();
 
   void stop();
   bool isRunning() const;
 
 private:
+  void registerGetNodeInfoService();
   bool running;
 };
 

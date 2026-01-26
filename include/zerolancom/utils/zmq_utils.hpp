@@ -1,11 +1,39 @@
 #pragma once
 #include "zerolancom/utils/singleton.hpp"
+#include <arpa/inet.h>
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <zmq.hpp>
 
 namespace zlc
 {
+
+// Default subnet mask for /24 network
+constexpr uint32_t DEFAULT_SUBNET_MASK = 0xFFFFFF00; // 255.255.255.0
+
+/**
+ * @brief Check if two IP addresses are in the same subnet.
+ *
+ * @param ip1 First IP address (e.g., local IP)
+ * @param ip2 Second IP address (e.g., remote IP)
+ * @param subnetMask Subnet mask in host byte order (default: 255.255.255.0)
+ * @return true if both IPs share the same network prefix
+ */
+inline bool isInSameSubnet(const std::string &ip1, const std::string &ip2,
+                           uint32_t subnetMask = DEFAULT_SUBNET_MASK)
+{
+  in_addr addr1{}, addr2{};
+  if (inet_aton(ip1.c_str(), &addr1) == 0)
+    return false;
+  if (inet_aton(ip2.c_str(), &addr2) == 0)
+    return false;
+
+  uint32_t ip1_host = ntohl(addr1.s_addr);
+  uint32_t ip2_host = ntohl(addr2.s_addr);
+
+  return (ip1_host & subnetMask) == (ip2_host & subnetMask);
+}
 
 using ZMQSocket = zmq::socket_t;
 

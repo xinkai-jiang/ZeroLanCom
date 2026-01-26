@@ -6,29 +6,6 @@
 namespace zlc
 {
 
-void Client::connect(ZMQSocket &socket, const std::string &service_name)
-{
-  // Lookup service info from node discovery table
-  auto serviceInfoPtr = NodeInfoManager::instance().getServiceInfo(service_name);
-
-  if (serviceInfoPtr == nullptr)
-  {
-    zlc::error("Service {} is not available", service_name);
-    return;
-  }
-
-  const SocketInfo &serviceInfo = *serviceInfoPtr;
-
-  zlc::info("[Client] Found service '{}' at {}:{}", service_name, serviceInfo.ip,
-            serviceInfo.port);
-
-  // Connect socket to service endpoint
-  socket.connect("tcp://" + serviceInfo.ip + ":" + std::to_string(serviceInfo.port));
-
-  zlc::info("[Client] Connected to service '{}' at {}:{}", service_name, serviceInfo.ip,
-            serviceInfo.port);
-}
-
 void Client::sendRequest(const std::string &service_name, const ByteView &payload,
                          ZMQSocket &socket)
 {

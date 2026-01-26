@@ -97,7 +97,8 @@ PYBIND11_MODULE(lancom_py, m)
           [](const std::string &service_name, const std::string &request)
           {
             std::string response;
-            Client::request<std::string, std::string>(service_name, request, response);
+            Client::zlcRequest<std::string, std::string>(service_name, request,
+                                                         response);
             return response;
           },
           py::arg("service_name"), py::arg("request"),

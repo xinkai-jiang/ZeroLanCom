@@ -4,7 +4,7 @@
 #include <string>
 
 // Core headers
-#include "zerolancom/nodes/node_info.hpp"
+#include "zerolancom/nodes/node_info_manager.hpp"
 #include "zerolancom/sockets/client.hpp"
 #include "zerolancom/sockets/publisher.hpp"
 #include "zerolancom/sockets/service_manager.hpp"
@@ -31,11 +31,11 @@ void waitForService(const std::string &service_name, int max_wait_ms = 1000,
 template <typename HandlerT>
 void registerServiceHandler(const std::string &service_name, HandlerT handler)
 {
-  auto &localInfo = LocalNodeInfo::instance();
+  auto &nodeInfoManager = NodeInfoManager::instance();
   auto &serviceManager = ServiceManager::instance();
 
   serviceManager.registerHandler(service_name, std::function(handler));
-  localInfo.registerServices(service_name, serviceManager.service_port);
+  nodeInfoManager.registerLocalService(service_name, serviceManager.service_port);
 
   zlc::info("Service {} registered at port {}", service_name,
             serviceManager.service_port);
@@ -50,7 +50,7 @@ void registerServiceHandler(const std::string &service_name, HandlerT handler,
   serviceManager.registerHandler(service_name, handler, instance);
 
   uint16_t port = serviceManager.service_port;
-  LocalNodeInfo::instance().registerServices(service_name, port);
+  NodeInfoManager::instance().registerLocalService(service_name, port);
 }
 
 template <typename HandlerT>
@@ -72,7 +72,7 @@ template <typename RequestType, typename ResponseType>
 void request(const std::string &service_name, const RequestType &req, ResponseType &res)
 {
   waitForService(service_name);
-  Client::request<RequestType, ResponseType>(service_name, req, res);
+  Client::zlcRequest<RequestType, ResponseType>(service_name, req, res);
 }
 
 template <typename RequestType>

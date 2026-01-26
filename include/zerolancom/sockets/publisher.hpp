@@ -5,7 +5,7 @@
 
 #include <zmq.hpp>
 
-#include "zerolancom/nodes/node_info.hpp"
+#include "zerolancom/nodes/node_info_manager.hpp"
 #include "zerolancom/serialization/serializer.hpp"
 #include "zerolancom/utils/logger.hpp"
 #include "zerolancom/utils/zmq_utils.hpp"
@@ -43,7 +43,7 @@ public:
     socket_ = ZMQContext::createSocket(zmq::socket_type::pub);
 
     // Bind to an ephemeral port
-    const std::string address = LocalNodeInfo::instance().nodeInfo.ip;
+    const std::string address = NodeInfoManager::instance().getLocalNodeInfo().ip;
 
     socket_->bind("tcp://" + address + ":0");
 
@@ -54,8 +54,8 @@ public:
               port_);
 
     // Register topic in node discovery
-    LocalNodeInfo::instance().registerTopic(full_topic_name,
-                                            static_cast<uint16_t>(port_));
+    NodeInfoManager::instance().registerLocalTopic(full_topic_name,
+                                                   static_cast<uint16_t>(port_));
   }
 
   // Destructor

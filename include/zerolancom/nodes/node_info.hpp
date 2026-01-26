@@ -1,13 +1,12 @@
 #pragma once
 
 #include <cstdint>
-#include <mutex>
 #include <string>
 #include <vector>
 
-#include "zerolancom/serialization/serializer.hpp"
+#include <msgpack.hpp>
+
 #include "zerolancom/utils/message.hpp"
-#include "zerolancom/utils/singleton.hpp"
 
 namespace zlc
 {
@@ -20,8 +19,7 @@ struct SocketInfo
   std::string ip;
   uint16_t port;
 
-  void encode(BinWriter &w) const;
-  static SocketInfo decode(BinReader &r, const std::string &ip);
+  MSGPACK_DEFINE(name, ip, port)
 };
 
 /* ================= NodeInfo ================= */
@@ -35,27 +33,9 @@ struct NodeInfo
   std::vector<SocketInfo> topics;
   std::vector<SocketInfo> services;
 
-  Bytes encode() const;
-  static NodeInfo decode(ByteView bv);
+  MSGPACK_DEFINE(nodeID, infoID, name, ip, topics, services)
+
   void printNodeInfo() const;
-};
-
-/* ================= LocalNodeInfo ================= */
-
-class LocalNodeInfo : public Singleton<LocalNodeInfo>
-{
-public:
-  NodeInfo nodeInfo;
-  const UUID &nodeID; // Reference to nodeInfo.nodeID
-
-  LocalNodeInfo(const std::string &name, const std::string &ip);
-
-  Bytes createHeartbeat() const;
-  void registerTopic(const std::string &name, uint16_t port);
-  void registerServices(const std::string &name, uint16_t port);
-
-private:
-  mutable std::mutex mutex_;
 };
 
 } // namespace zlc

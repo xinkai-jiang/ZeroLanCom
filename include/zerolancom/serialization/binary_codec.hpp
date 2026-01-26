@@ -39,34 +39,6 @@ struct ByteBuffer
 };
 
 // =======================
-// Writer
-// =======================
-
-struct BinWriter
-{
-  Bytes buf;
-
-  void write_u16(uint16_t v);
-  void write_u32(uint32_t v);
-  void write_string(const std::string &s);
-  void write_fixed_string(const std::string &s, size_t len);
-};
-
-// =======================
-// Reader (zero-copy)
-// =======================
-
-struct BinReader
-{
-  ByteView view;
-
-  uint16_t read_u16();
-  uint32_t read_u32();
-  std::string read_string();
-  std::string read_fixed_string(size_t len);
-};
-
-// =======================
 // Utilities
 // =======================
 
