@@ -101,3 +101,12 @@ configure_file(
 # Add examples
 # ----------------------------
 add_subdirectory(examples)
+
+# ----------------------------
+# Add tests (optional)
+# ----------------------------
+option(BUILD_TESTS "Build test suite" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

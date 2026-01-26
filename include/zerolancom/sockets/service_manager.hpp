@@ -2,16 +2,17 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
-
 #include <zmq.hpp>
 
 #include "zerolancom/serialization/serializer.hpp"
 #include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/periodic_task.hpp"
 #include "zerolancom/utils/request_result.hpp"
+#include "zerolancom/utils/thread_pool.hpp"
 #include "zerolancom/utils/zmq_utils.hpp"
 
 namespace zlc
@@ -23,11 +24,12 @@ using ServiceCallback = std::function<Bytes(const ByteView &payload)>;
  * @brief ServiceManager handles incoming RPC service requests.
  *
  * Design notes:
- * - Owns a REP socket and a worker thread.
+ * - Uses ZMQ REP socket for request handling with PeriodicTask for polling.
+ * - All polling tasks use the shared ThreadPool from ZeroLanComNode.
  * - Template registerHandler functions must remain header-only.
  * - Non-template functions are implemented in service_manager.cpp.
  */
-class ServiceManager
+class ServiceManager : public Singleton<ServiceManager>
 {
 public:
   int service_port{0};
@@ -85,18 +87,16 @@ public:
   ServiceManager &operator=(ServiceManager &&) = default;
 
 private:
-  // Thread entry for handling service requests
-  void responseSocketThread();
+  // Poll once for incoming service requests
+  void pollOnce();
 
 private:
   std::unordered_map<std::string, std::function<Bytes(const ByteView &)>> handlers_;
 
-  bool is_running{false};
-
-  zmq::socket_t res_socket_;
+  ZMQSocket *res_socket_;
   static constexpr int SOCKET_TIMEOUT_MS = 100;
 
-  std::thread service_thread_;
+  std::unique_ptr<PeriodicTask> poll_task_;
 };
 
 } // namespace zlc

@@ -19,7 +19,7 @@ struct Empty
 };
 
 // A canonical Empty instance for request usage.
-inline static Empty empty{};
+[[maybe_unused]] inline static Empty empty{};
 
 // Encode an object into a msgpack byte buffer.
 template <typename T> inline void encode(const T &obj, ByteBuffer &out)

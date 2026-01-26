@@ -2,10 +2,25 @@
 
 #include <iostream>
 
+#include <msgpack.hpp>
+#include <zmq.hpp>
+
+#include "zerolancom/sockets/client.hpp"
 #include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/zmq_utils.hpp"
 
 namespace zlc
 {
+
+/* ================= Constructor ================= */
+
+NodeInfoManager::NodeInfoManager(const std::string &name, const std::string &ip)
+{
+  localNodeInfo_.nodeID = generateUUID();
+  localNodeInfo_.infoID = 0;
+  localNodeInfo_.name = name;
+  localNodeInfo_.ip = ip;
+}
 
 /* ================= private helpers ================= */
 
@@ -31,14 +46,27 @@ bool NodeInfoManager::checkNodeInfoIDUnlocked(const std::string &nodeID,
   return it->second == infoID;
 }
 
-/* ================= public API ================= */
-
-void NodeInfoManager::registerUpdateCallback(
-    const std::function<void(const NodeInfo &)> &callback)
+std::optional<NodeInfo> NodeInfoManager::fetchNodeInfo(const std::string &ip,
+                                                       int32_t servicePort)
 {
-  std::unique_lock lock(callback_mutex_);
-  update_callback_.push_back(callback);
+  try
+  {
+    zlc::info("[NodeInfoManager] Fetching node info from {}:{}", ip, servicePort);
+    const std::string service_url = "tcp://" + ip + ":" + std::to_string(servicePort);
+    // Create a temporary REQ socket
+    NodeInfo info;
+    Client::zlcRequest<Empty, NodeInfo>("get_node_info", service_url, Empty{}, info);
+    return info;
+  }
+  catch (const std::exception &e)
+  {
+    zlc::warn("[NodeInfoManager] Failed to fetch node info from {}:{}: {}", ip,
+              servicePort, e.what());
+    return std::nullopt;
+  }
 }
+
+/* ================= public API ================= */
 
 bool NodeInfoManager::checkNodeID(const std::string &nodeID) const
 {
@@ -76,6 +104,13 @@ NodeInfoManager::getPublisherInfo(const std::string &topicName) const
       }
     }
   }
+  for (const auto &t : localNodeInfo_.topics)
+  {
+    if (t.name == topicName)
+    {
+      result.push_back(t);
+    }
+  }
   return result;
 }
 
@@ -91,6 +126,13 @@ const SocketInfo *NodeInfoManager::getServiceInfo(const std::string &serviceName
       {
         return &t;
       }
+    }
+  }
+  for (const auto &t : localNodeInfo_.services)
+  {
+    if (t.name == serviceName)
+    {
+      return &t;
     }
   }
   return nullptr;
@@ -115,6 +157,7 @@ void NodeInfoManager::checkHeartbeats()
 
   for (const auto &nodeID : to_remove)
   {
+    node_remove_event.trigger(nodes_info_[nodeID]);
     nodes_info_.erase(nodeID);
     nodes_info_id_.erase(nodeID);
     nodes_heartbeat_.erase(nodeID);
@@ -122,44 +165,53 @@ void NodeInfoManager::checkHeartbeats()
   }
 }
 
-void NodeInfoManager::processHeartbeat(const NodeInfo &nodeInfo)
+void NodeInfoManager::processHeartbeat(const HeartbeatMessage &heartbeat,
+                                       const std::string &nodeIP)
 {
   try
   {
-    bool is_new = false;
-    bool info_changed = false;
+    bool needsFetch = false;
+    bool isNew = false;
 
     {
       std::unique_lock lock(data_mutex_);
 
-      if (!checkNodeIDUnlocked(nodeInfo.nodeID))
+      // Update heartbeat timestamp
+      nodes_heartbeat_[heartbeat.node_id] = std::chrono::steady_clock::now();
+
+      if (!checkNodeIDUnlocked(heartbeat.node_id))
       {
-        updateNodeUnlocked(nodeInfo.nodeID, nodeInfo);
-        is_new = true;
+        // New node - need to fetch full info
+        needsFetch = true;
+        isNew = true;
       }
-      else if (!checkNodeInfoIDUnlocked(nodeInfo.nodeID, nodeInfo.infoID))
+      else if (!checkNodeInfoIDUnlocked(heartbeat.node_id,
+                                        static_cast<uint32_t>(heartbeat.info_id)))
       {
-        updateNodeUnlocked(nodeInfo.nodeID, nodeInfo);
-        info_changed = true;
-      }
-      else
-      {
-        nodes_heartbeat_[nodeInfo.nodeID] = std::chrono::steady_clock::now();
+        // Info changed - need to fetch updated info
+        needsFetch = true;
       }
     }
 
-    if (is_new)
+    if (needsFetch)
     {
-      zlc::info("Node {} added via heartbeat", nodeInfo.name);
-      nodeInfo.printNodeInfo();
-    }
-
-    if (is_new || info_changed)
-    {
-      std::shared_lock lock(callback_mutex_);
-      for (const auto &cb : update_callback_)
+      auto nodeInfoOpt = fetchNodeInfo(nodeIP, heartbeat.service_port);
+      if (nodeInfoOpt.has_value())
       {
-        cb(nodeInfo);
+        NodeInfo &nodeInfo = nodeInfoOpt.value();
+
+        {
+          std::unique_lock lock(data_mutex_);
+          updateNodeUnlocked(heartbeat.node_id, nodeInfo);
+        }
+
+        if (isNew)
+        {
+          zlc::info("Node {} added via heartbeat", nodeInfo.name);
+          nodeInfo.printNodeInfo();
+        }
+
+        node_update_event.trigger(nodeInfo);
       }
     }
   }
@@ -167,6 +219,57 @@ void NodeInfoManager::processHeartbeat(const NodeInfo &nodeInfo)
   {
     std::cerr << "Error processing heartbeat: " << e.what() << "\n";
   }
+}
+
+/* ================= Local Node Management ================= */
+
+const UUID &NodeInfoManager::nodeID() const
+{
+  return localNodeInfo_.nodeID;
+}
+
+void NodeInfoManager::setGroupName(const std::string &name)
+{
+  std::lock_guard<std::mutex> lock(local_mutex_);
+  groupName_ = name;
+}
+
+void NodeInfoManager::setServicePort(int32_t port)
+{
+  std::lock_guard<std::mutex> lock(local_mutex_);
+  servicePort_ = port;
+}
+
+HeartbeatMessage NodeInfoManager::createHeartbeat() const
+{
+  std::lock_guard<std::mutex> lock(local_mutex_);
+  HeartbeatMessage msg;
+  msg.zlc_version = {ZLC_VERSION_MAJOR, ZLC_VERSION_MINOR, ZLC_VERSION_PATCH};
+  msg.node_id = localNodeInfo_.nodeID;
+  msg.info_id = static_cast<int32_t>(localNodeInfo_.infoID);
+  msg.service_port = servicePort_;
+  msg.group_name = groupName_;
+  return msg;
+}
+
+NodeInfo NodeInfoManager::getLocalNodeInfo() const
+{
+  std::lock_guard<std::mutex> lock(local_mutex_);
+  return localNodeInfo_;
+}
+
+void NodeInfoManager::registerLocalTopic(const std::string &name, uint16_t port)
+{
+  std::lock_guard<std::mutex> lock(local_mutex_);
+  localNodeInfo_.topics.push_back(SocketInfo{name, localNodeInfo_.ip, port});
+  ++localNodeInfo_.infoID;
+}
+
+void NodeInfoManager::registerLocalService(const std::string &name, uint16_t port)
+{
+  std::lock_guard<std::mutex> lock(local_mutex_);
+  localNodeInfo_.services.push_back(SocketInfo{name, localNodeInfo_.ip, port});
+  ++localNodeInfo_.infoID;
 }
 
 } // namespace zlc

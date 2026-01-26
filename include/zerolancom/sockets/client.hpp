@@ -4,9 +4,10 @@
 
 #include <zmq.hpp>
 
-#include "zerolancom/nodes/zerolancom_node.hpp"
+#include "zerolancom/nodes/node_info_manager.hpp"
 #include "zerolancom/serialization/serializer.hpp"
 #include "zerolancom/utils/logger.hpp"
+#include "zerolancom/utils/zmq_utils.hpp"
 
 namespace zlc
 {
@@ -17,20 +18,16 @@ namespace zlc
  * Design notes:
  * - Non-template functions are declared here and defined in client.cpp.
  * - Template functions must remain header-only.
- * - This class relies on ZeroLanComNode singleton being initialized.
+ * - This class relies on ZMQContext singleton being initialized.
  */
 class Client
 {
 public:
-  // Connect a ZMQ socket to the given service
-  static void connect(zmq::socket_t &socket, const std::string &service_name);
-
   // Send a multipart request (service name + payload)
   static void sendRequest(const std::string &service_name, const ByteView &payload,
-                          zmq::socket_t &socket);
-
+                          ZMQSocket &socket);
   // Receive multipart response and extract payload
-  static void receiveResponse(zmq::socket_t &socket, zmq::message_t &payloadMsg,
+  static void receiveResponse(ZMQSocket &socket, zmq::message_t &payloadMsg,
                               const std::string &service_name);
 
   /**
@@ -41,14 +38,14 @@ public:
    * - This function blocks until a response is received or an error occurs.
    */
   template <typename RequestType, typename ResponseType>
-  static void request(const std::string &service_name, const RequestType &request,
-                      ResponseType &response)
+  static void zlcRequest(const std::string service_name, const std::string &service_url,
+                         const RequestType &request, ResponseType &response)
   {
     // Create a REQ socket for this request
-    zmq::socket_t req_socket(ZmqContext::instance(), zmq::socket_type::req);
+    ZMQSocket req_socket = ZMQContext::createTempSocket(zmq::socket_type::req);
 
     // Resolve service and connect
-    connect(req_socket, service_name);
+    req_socket.connect(service_url);
 
     // Serialize request
     ByteBuffer out;
@@ -68,8 +65,33 @@ public:
     {
       decode(payload, response);
     }
-
+    req_socket.close();
     zlc::info("[Client] Received response from service '{}'", service_name);
+  }
+
+  /**
+   * @brief Perform a blocking service request.
+   *
+   * Requirements:
+   * - RequestType and ResponseType must be serializable via encode/decode.
+   * - This function blocks until a response is received or an error occurs.
+   */
+  template <typename RequestType, typename ResponseType>
+  static void zlcRequest(const std::string &service_name, const RequestType &request,
+                         ResponseType &response)
+  {
+    auto serviceInfoPtr = NodeInfoManager::instance().getServiceInfo(service_name);
+
+    if (serviceInfoPtr == nullptr)
+    {
+      zlc::error("Service {} is not available", service_name);
+      return;
+    }
+
+    const SocketInfo &serviceInfo = *serviceInfoPtr;
+    const std::string service_url =
+        "tcp://" + serviceInfo.ip + ":" + std::to_string(serviceInfo.port);
+    zlcRequest<RequestType, ResponseType>(service_name, service_url, request, response);
   }
 };
 

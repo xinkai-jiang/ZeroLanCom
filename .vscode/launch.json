@@ -1,11 +1,13 @@
 {
   "version": "0.2.0",
   "configurations": [
+
+
     {
       "name": "Debug C++ (GDB)",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/main",
+      "program": "${workspaceFolder}/build/examples/service_example",
       // "args": ["./local_test.yaml"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
@@ -14,7 +16,7 @@
       "setupCommands": [
         { "description": "Enable pretty printing", "text": "-enable-pretty-printing", "ignoreFailures": true }
       ],
-      "externalConsole": true
+      "externalConsole": false
     }
   ]
 }

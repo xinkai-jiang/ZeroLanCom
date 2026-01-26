@@ -1,38 +1,13 @@
 #include "zerolancom/sockets/client.hpp"
-
+#include "zerolancom/nodes/node_info_manager.hpp"
 #include <chrono>
 #include <thread>
 
 namespace zlc
 {
 
-void Client::connect(zmq::socket_t &socket, const std::string &service_name)
-{
-  auto &node = ZeroLanComNode::instance();
-
-  // Lookup service info from node discovery table
-  auto serviceInfoPtr = node.nodesManager.getServiceInfo(service_name);
-
-  if (serviceInfoPtr == nullptr)
-  {
-    zlc::error("Service {} is not available", service_name);
-    return;
-  }
-
-  const SocketInfo &serviceInfo = *serviceInfoPtr;
-
-  zlc::info("[Client] Found service '{}' at {}:{}", service_name, serviceInfo.ip,
-            serviceInfo.port);
-
-  // Connect socket to service endpoint
-  socket.connect("tcp://" + serviceInfo.ip + ":" + std::to_string(serviceInfo.port));
-
-  zlc::info("[Client] Connected to service '{}' at {}:{}", service_name, serviceInfo.ip,
-            serviceInfo.port);
-}
-
 void Client::sendRequest(const std::string &service_name, const ByteView &payload,
-                         zmq::socket_t &socket)
+                         ZMQSocket &socket)
 {
   // Send service name frame
   socket.send(zmq::buffer(service_name), zmq::send_flags::sndmore);
@@ -43,7 +18,7 @@ void Client::sendRequest(const std::string &service_name, const ByteView &payloa
   zlc::info("[Client] Sent request to service '{}'", service_name);
 }
 
-void Client::receiveResponse(zmq::socket_t &socket, zmq::message_t &payloadMsg,
+void Client::receiveResponse(ZMQSocket &socket, zmq::message_t &payloadMsg,
                              const std::string &service_name)
 {
   zmq::message_t statusMsg;

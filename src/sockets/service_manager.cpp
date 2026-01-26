@@ -5,12 +5,11 @@ namespace zlc
 {
 
 ServiceManager::ServiceManager(const std::string &ip)
-    : res_socket_(ZmqContext::instance(), zmq::socket_type::rep)
 {
-  res_socket_.set(zmq::sockopt::rcvtimeo, SOCKET_TIMEOUT_MS);
-  res_socket_.bind("tcp://" + ip + ":0");
-
-  service_port = getBoundPort(res_socket_);
+  res_socket_ = ZMQContext::createSocket(zmq::socket_type::rep);
+  res_socket_->set(zmq::sockopt::rcvtimeo, SOCKET_TIMEOUT_MS);
+  res_socket_->bind("tcp://" + ip + ":0");
+  service_port = getBoundPort(*res_socket_);
 
   zlc::info("[ServiceManager] ServiceManager bound to port {}", service_port);
 }
@@ -18,21 +17,22 @@ ServiceManager::ServiceManager(const std::string &ip)
 ServiceManager::~ServiceManager()
 {
   stop();
-  res_socket_.close();
 }
 
 void ServiceManager::start()
 {
-  is_running = true;
-  service_thread_ = std::thread(&ServiceManager::responseSocketThread, this);
+  poll_task_ =
+      std::make_unique<PeriodicTask>([this]() { this->pollOnce(); }, 100,
+                                     ThreadPool::instance()); // Poll every 100ms
+
+  poll_task_->start();
 }
 
 void ServiceManager::stop()
 {
-  is_running = false;
-  if (service_thread_.joinable())
+  if (poll_task_)
   {
-    service_thread_.join();
+    poll_task_->stop();
   }
 }
 
@@ -85,15 +85,15 @@ void ServiceManager::removeHandler(const std::string &name)
   handlers_.erase(name);
 }
 
-void ServiceManager::responseSocketThread()
+void ServiceManager::pollOnce()
 {
-  while (is_running)
+  try
   {
     zmq::message_t service_name_msg;
 
-    if (!res_socket_.recv(service_name_msg, zmq::recv_flags::none))
+    if (!res_socket_->recv(service_name_msg, zmq::recv_flags::none))
     {
-      continue;
+      return;
     }
 
     std::string service_name = decodeServiceHeader(
@@ -103,13 +103,13 @@ void ServiceManager::responseSocketThread()
     if (!service_name_msg.more())
     {
       zlc::warn("[ServiceManager] Missing payload frame");
-      continue;
+      return;
     }
 
     zmq::message_t payload_msg;
-    if (!res_socket_.recv(payload_msg, zmq::recv_flags::none))
+    if (!res_socket_->recv(payload_msg, zmq::recv_flags::none))
     {
-      continue;
+      return;
     }
 
     ByteView payload{static_cast<const uint8_t *>(payload_msg.data()),
@@ -124,8 +124,17 @@ void ServiceManager::responseSocketThread()
     handleRequest(service_name, payload, response);
 
     // Send response frames
-    res_socket_.send(zmq::buffer(response.code), zmq::send_flags::sndmore);
-    res_socket_.send(zmq::buffer(response.payload), zmq::send_flags::none);
+    res_socket_->send(zmq::buffer(response.code), zmq::send_flags::sndmore);
+    res_socket_->send(zmq::buffer(response.payload), zmq::send_flags::none);
+  }
+  catch (const zmq::error_t &e)
+  {
+    if (e.num() == ETERM)
+    {
+      zlc::info("[ServiceManager] Context terminated during poll");
+      return;
+    }
+    zlc::error("[ServiceManager] ZMQ error: {}", e.what());
   }
 }
 

@@ -3,8 +3,11 @@
 #include <mutex>
 #include <string>
 
+#include <zmq.hpp>
+
 #include "zerolancom/utils/logger.hpp"
 #include "zerolancom/utils/singleton.hpp"
+#include "zerolancom/utils/thread_pool.hpp"
 
 #include "zerolancom/nodes/multicast.hpp"
 #include "zerolancom/nodes/node_info.hpp"
@@ -18,26 +21,17 @@ namespace zlc
 class ZeroLanComNode : public Singleton<ZeroLanComNode>
 {
 public:
+  ZeroLanComNode(const std::string &name, const std::string &ip,
+                 const std::string &group, int groupPort);
+  ZeroLanComNode(const std::string &name, const std::string &ip,
+                 const std::string &group, int groupPort, const std::string &groupName);
   ~ZeroLanComNode();
-  static void init(const std::string &name, const std::string &ip,
-                   const std::string &group, int groupPort);
 
   void stop();
   bool isRunning() const;
 
-  void registerTopic(const std::string &topic_name, int port);
-  const std::string &GetIP() const;
-
-  NodeInfoManager nodesManager;
-  ServiceManager serviceManager;
-  SubscriberManager subscriberManager;
-  LocalNodeInfo localInfo;
-
 private:
-  ZeroLanComNode(const std::string &name, const std::string &ip,
-                 const std::string &group, int groupPort);
-  MulticastSender mcastSender;
-  MulticastReceiver mcastReceiver;
+  void registerGetNodeInfoService();
   bool running;
 };
 

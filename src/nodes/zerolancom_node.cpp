@@ -5,28 +5,37 @@
 namespace zlc
 {
 
-/* ================= lifecycle ================= */
-
-void ZeroLanComNode::init(const std::string &name, const std::string &ip,
-                          const std::string &group, int groupPort)
+ZeroLanComNode::ZeroLanComNode(const std::string &name, const std::string &ip,
+                               const std::string &group, int groupPort)
+    : ZeroLanComNode(name, ip, group, groupPort, "zlc_default_group_name")
 {
-  if (instance_)
-  {
-    throw std::logic_error("ZeroLanComNode singleton already initialized");
-  }
-  instance_.reset(new ZeroLanComNode(name, ip, group, groupPort));
 }
 
 ZeroLanComNode::ZeroLanComNode(const std::string &name, const std::string &ip,
-                               const std::string &group, int groupPort)
-    : localInfo(name, ip), mcastSender(group, groupPort, ip),
-      mcastReceiver(group, groupPort, ip), serviceManager(ip),
-      subscriberManager(nodesManager), running(true)
+                               const std::string &group, int groupPort,
+                               const std::string &groupName)
 {
-  mcastSender.start(localInfo);
-  mcastReceiver.start(nodesManager);
-  serviceManager.start();
-  subscriberManager.start();
+  ThreadPool::initExternal(4); // 4 worker threads
+  ZMQContext::initExternal();
+  NodeInfoManager::initExternal(name, ip);
+  ServiceManager::initExternal(ip);
+
+  // Set service port in NodeInfoManager before starting multicast
+  NodeInfoManager::instance().setServicePort(ServiceManager::instance().service_port);
+
+  MulticastReceiver::initExternal(group, groupPort, ip, groupName);
+  MulticastSender::initExternal(group, groupPort, ip, groupName);
+  SubscriberManager::initExternal();
+
+  // Register internal get_node_info service
+  registerGetNodeInfoService();
+
+  ThreadPool::instance().start();
+  MulticastSender::instance().start();
+  MulticastReceiver::instance().start();
+  ServiceManager::instance().start();
+  SubscriberManager::instance().start();
+  running = true;
 }
 
 ZeroLanComNode::~ZeroLanComNode()
@@ -34,31 +43,41 @@ ZeroLanComNode::~ZeroLanComNode()
   stop();
 }
 
+void ZeroLanComNode::registerGetNodeInfoService()
+{
+  auto &serviceManager = ServiceManager::instance();
+  serviceManager.registerHandler<Empty, NodeInfo>(
+      "get_node_info",
+      [](const Empty &) -> NodeInfo
+      { return NodeInfoManager::instance().getLocalNodeInfo(); });
+}
+
 void ZeroLanComNode::stop()
 {
   running = false;
-  mcastSender.stop();
-  mcastReceiver.stop();
-  serviceManager.stop();
-  subscriberManager.stop();
+  MulticastSender::instance().stop();
+  MulticastReceiver::instance().stop();
+  ServiceManager::instance().stop();
+  SubscriberManager::instance().stop();
+  ThreadPool::instance().stop();
+
+  // Destroy in reverse order of initialization, respecting dependencies
+  // SubscriberManager subscribes to NodeInfoManager events, so destroy first
+  SubscriberManager::destroy();
+  ServiceManager::destroy();
+  MulticastReceiver::destroy();
+  MulticastSender::destroy();
+  NodeInfoManager::destroy();
+  ZMQContext::destroy();
+  ThreadPool::destroy();
+  // Shutdown logger before destroying singletons to avoid segfault during global dtors
+  Logger::shutdown();
+  std::cout << "[ZeroLanComNode] Shutdown complete." << std::endl;
 }
 
 bool ZeroLanComNode::isRunning() const
 {
   return running;
-}
-
-/* ================= API ================= */
-
-void ZeroLanComNode::registerTopic(const std::string &topic_name, int port)
-{
-  localInfo.registerTopic(topic_name, static_cast<uint16_t>(port));
-  zlc::info("Topic {} registered at port {}", topic_name, port);
-}
-
-const std::string &ZeroLanComNode::GetIP() const
-{
-  return localInfo.nodeInfo.ip;
 }
 
 } // namespace zlc

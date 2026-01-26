@@ -3,12 +3,15 @@
 namespace zlc
 {
 
-SubscriberManager::SubscriberManager(NodeInfoManager &node_info_mgr)
-    : node_info_mgr_(node_info_mgr)
+SubscriberManager::SubscriberManager()
 {
-  // Register callback to receive node/topic updates
-  node_info_mgr_.registerUpdateCallback(std::bind(
+  // Subscribe to node/topic updates
+  NodeInfoManager::instance().node_update_event.subscribe(std::bind(
       &SubscriberManager::updateTopicSubscriber, this, std::placeholders::_1));
+
+  // Subscribe to node removal events
+  NodeInfoManager::instance().node_remove_event.subscribe(std::bind(
+      &SubscriberManager::removeTopicSubscriber, this, std::placeholders::_1));
 }
 
 SubscriberManager::~SubscriberManager()
@@ -18,24 +21,47 @@ SubscriberManager::~SubscriberManager()
 
 void SubscriberManager::start()
 {
-  is_running_ = true;
-  poll_thread_ = std::thread(&SubscriberManager::pollLoop, this);
+  poll_task_ =
+      std::make_unique<PeriodicTask>([this]() { this->pollOnce(); }, 100,
+                                     ThreadPool::instance()); // Poll every 100ms
+
+  poll_task_->start();
 }
 
 void SubscriberManager::stop()
 {
-  is_running_ = false;
-  if (poll_thread_.joinable())
+  if (poll_task_)
   {
-    poll_thread_.join();
+    poll_task_->stop();
   }
+}
+
+void SubscriberManager::_registerTopicSubscriber(
+    const std::string &topicName, const std::function<void(const ByteView &)> &callback)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  Subscriber sub;
+  sub.topicName = topicName;
+  sub.callback = callback;
+
+  sub.socket = ZMQContext::createSocket(zmq::socket_type::sub);
+  sub.socket->set(zmq::sockopt::subscribe, "");
+  auto urls = findTopicURLs(topicName);
+  for (const auto &url : urls)
+  {
+    sub.socket->connect(url);
+    zlc::info("[SubscriberManager] '{}' connected to {}", topicName, url);
+    sub.publisherURLs.push_back(url);
+  }
+  subscribers_.push_back(std::move(sub));
 }
 
 std::vector<std::string> SubscriberManager::findTopicURLs(const std::string &topicName)
 {
   std::vector<std::string> urls;
 
-  auto infos = node_info_mgr_.getPublisherInfo(topicName);
+  auto infos = NodeInfoManager::instance().getPublisherInfo(topicName);
 
   for (const auto &t : infos)
   {
@@ -72,52 +98,82 @@ void SubscriberManager::updateTopicSubscriber(const NodeInfo &nodeInfo)
   }
 }
 
-void SubscriberManager::pollLoop()
+void SubscriberManager::removeTopicSubscriber(const NodeInfo &nodeInfo)
 {
-  zlc::info("[SubscriberManager] Poll thread started.");
+  std::lock_guard<std::mutex> lock(mutex_);
 
-  while (is_running_)
+  for (const auto &topic : nodeInfo.topics)
   {
-    try
+    for (auto &sub : subscribers_)
     {
-      std::vector<zmq::pollitem_t> poll_items;
-      std::vector<Subscriber *> subs;
+      if (sub.topicName != topic.name)
+        continue;
 
+      std::string url = fmt::format("tcp://{}:{}", topic.ip, topic.port);
+
+      auto it = std::find(sub.publisherURLs.begin(), sub.publisherURLs.end(), url);
+      if (it == sub.publisherURLs.end())
       {
-        std::lock_guard<std::mutex> lock(mutex_);
-        poll_items.reserve(subscribers_.size());
-        subs.reserve(subscribers_.size());
-
-        for (auto &sub : subscribers_)
-        {
-          poll_items.push_back({static_cast<void *>(*sub.socket), 0, ZMQ_POLLIN, 0});
-          subs.push_back(&sub);
-        }
+        continue; // not connected to this publisher
       }
 
-      zmq::poll(poll_items.data(), poll_items.size(), std::chrono::milliseconds(100));
+      sub.socket->disconnect(url);
+      sub.publisherURLs.erase(it);
 
-      for (size_t i = 0; i < poll_items.size(); ++i)
+      zlc::info("[SubscriberManager] '{}' disconnected from {}", topic.name, url);
+    }
+  }
+}
+
+void SubscriberManager::pollOnce()
+{
+  try
+  {
+    std::vector<zmq::pollitem_t> poll_items;
+    std::vector<Subscriber *> subs;
+
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      poll_items.reserve(subscribers_.size());
+      subs.reserve(subscribers_.size());
+
+      for (auto &sub : subscribers_)
       {
-        if (poll_items[i].revents & ZMQ_POLLIN)
-        {
-          zmq::message_t msg;
-          if (!subs[i]->socket->recv(msg, zmq::recv_flags::none))
-          {
-            continue;
-          }
-
-          ByteView view{static_cast<const uint8_t *>(msg.data()), msg.size()};
-
-          subs[i]->callback(view);
-        }
+        poll_items.push_back({sub.socket->handle(), 0, ZMQ_POLLIN, 0});
+        subs.push_back(&sub);
       }
     }
-    catch (const std::exception &e)
+
+    zmq::poll(poll_items.data(), poll_items.size(), std::chrono::milliseconds(10));
+
+    for (size_t i = 0; i < poll_items.size(); ++i)
     {
-      zlc::info("[SubscriberManager] Poll thread exception: {}", e.what());
-      continue;
+      if (poll_items[i].revents & ZMQ_POLLIN)
+      {
+        zmq::message_t msg;
+        if (!subs[i]->socket->recv(msg, zmq::recv_flags::none))
+        {
+          continue;
+        }
+
+        ByteView view{static_cast<const uint8_t *>(msg.data()), msg.size()};
+
+        subs[i]->callback(view);
+      }
     }
+  }
+  catch (const zmq::error_t &e)
+  {
+    if (e.num() == ETERM)
+    {
+      zlc::info("[SubscriberManager] Context terminated during poll");
+      return;
+    }
+    zlc::error("[SubscriberManager] ZMQ error: {}", e.what());
+  }
+  catch (const std::exception &e)
+  {
+    zlc::info("[SubscriberManager] Poll exception: {}", e.what());
   }
 }
 
