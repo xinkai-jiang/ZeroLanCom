@@ -83,8 +83,6 @@ public:
         zlc::warn("[PeriodicTask] Task did not finish within timeout period");
       }
     }
-
-    zlc::info("[PeriodicTask] Stopped periodic task");
   }
 
   /**

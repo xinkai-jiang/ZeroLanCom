@@ -8,11 +8,18 @@
 namespace zlc
 {
 
-void init(const std::string &node_name, const std::string &ip_address)
+void init(const std::string &node_name, const std::string &ip_address,
+          const std::string &group, int groupPort,
+          const std::string &groupName)
 {
   Logger::init(false);
   Logger::setLevel(LogLevel::INFO);
-  ZeroLanComNode::initManaged(node_name, ip_address, "224.0.0.1", 7720);
+  ZeroLanComNode::initManaged(node_name, ip_address, group, groupPort, groupName);
+}
+
+void shutdown()
+{
+  ZeroLanComNode::destroy();
 }
 
 void sleep(int ms)

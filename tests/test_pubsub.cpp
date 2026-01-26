@@ -20,7 +20,10 @@ namespace
 {
 AsyncResult<std::string> g_string_result;
 
-void stringCallback(const std::string &msg) { g_string_result.set(msg); }
+void stringCallback(const std::string &msg)
+{
+  g_string_result.set(msg);
+}
 } // namespace
 
 // =============================================
@@ -39,6 +42,7 @@ protected:
 
   void TearDown() override
   {
+    zlc::shutdown();
     // Allow time for cleanup
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }

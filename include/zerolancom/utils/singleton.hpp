@@ -16,13 +16,15 @@ public:
 
   static void destroy()
   {
-    if (!unique_instance_)
+    if (unique_instance_)
+    {
+      unique_instance_.reset();
+      instance_ = nullptr;
+    }
+    else if (instance_)
     {
       delete instance_;
       instance_ = nullptr;
-    }
-    else
-    {
     }
   }
 

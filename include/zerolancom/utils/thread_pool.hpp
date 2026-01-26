@@ -110,7 +110,6 @@ public:
     }
 
     workers_.clear();
-    zlc::info("[ThreadPool] Stopped all worker threads");
   }
 
   /**

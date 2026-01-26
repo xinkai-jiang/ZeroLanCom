@@ -19,7 +19,7 @@ struct SocketInfo
   std::string ip;
   uint16_t port;
 
-  MSGPACK_DEFINE(name, ip, port)
+  MSGPACK_DEFINE_MAP(name, ip, port)
 };
 
 /* ================= NodeInfo ================= */
@@ -33,7 +33,7 @@ struct NodeInfo
   std::vector<SocketInfo> topics;
   std::vector<SocketInfo> services;
 
-  MSGPACK_DEFINE(nodeID, infoID, name, ip, topics, services)
+  MSGPACK_DEFINE_MAP(nodeID, infoID, name, ip, topics, services)
 
   void printNodeInfo() const;
 };

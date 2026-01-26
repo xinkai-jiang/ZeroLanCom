@@ -28,6 +28,7 @@ protected:
 
   void TearDown() override
   {
+    zlc::shutdown();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 

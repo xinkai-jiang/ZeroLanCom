@@ -17,10 +17,8 @@ namespace zlc
 void Logger::init(bool enable_file_logging, const std::string &log_dir)
 {
   // Ensure initialization happens only once
-  static bool initialized = false;
-  if (initialized)
+  if (initialized_)
     return;
-  initialized = true;
 
   spdlog::init_thread_pool(8192, 1);
 
@@ -51,6 +49,22 @@ void Logger::init(bool enable_file_logging, const std::string &log_dir)
 
   spdlog::set_default_logger(async_logger);
   spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");
+
+  initialized_ = true;
+}
+
+void Logger::shutdown()
+{
+  if (!initialized_)
+    return;
+
+  initialized_ = false;
+  spdlog::shutdown();
+}
+
+bool Logger::isInitialized()
+{
+  return initialized_;
 }
 
 void Logger::setLevel(LogLevel lvl)
@@ -80,22 +94,26 @@ spdlog::level::level_enum Logger::toSpdLevel(LogLevel lvl)
 
 void trace(const std::string &msg)
 {
-  spdlog::trace(msg);
+  if (Logger::isInitialized())
+    spdlog::trace(msg);
 }
 
 void info(const std::string &msg)
 {
-  spdlog::info(msg);
+  if (Logger::isInitialized())
+    spdlog::info(msg);
 }
 
 void warn(const std::string &msg)
 {
-  spdlog::warn(msg);
+  if (Logger::isInitialized())
+    spdlog::warn(msg);
 }
 
 void error(const std::string &msg)
 {
-  spdlog::error(msg);
+  if (Logger::isInitialized())
+    spdlog::error(msg);
 }
 
 void fatal(const std::string &msg)

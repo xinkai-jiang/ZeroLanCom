@@ -2,11 +2,12 @@
   "version": "0.2.0",
   "configurations": [
 
+
     {
       "name": "Debug C++ (GDB)",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/examples/custom_message_example",
+      "program": "${workspaceFolder}/build/examples/service_example",
       // "args": ["./local_test.yaml"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",

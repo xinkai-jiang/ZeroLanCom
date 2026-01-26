@@ -5,12 +5,9 @@
 namespace zlc
 {
 
-// Default group name
-constexpr const char *DEFAULT_GROUP_NAME = "zlc_default";
-
 ZeroLanComNode::ZeroLanComNode(const std::string &name, const std::string &ip,
                                const std::string &group, int groupPort)
-    : ZeroLanComNode(name, ip, group, groupPort, DEFAULT_GROUP_NAME)
+    : ZeroLanComNode(name, ip, group, groupPort, "zlc_default_group_name")
 {
 }
 
@@ -58,20 +55,24 @@ void ZeroLanComNode::registerGetNodeInfoService()
 void ZeroLanComNode::stop()
 {
   running = false;
-
   MulticastSender::instance().stop();
   MulticastReceiver::instance().stop();
   ServiceManager::instance().stop();
   SubscriberManager::instance().stop();
   ThreadPool::instance().stop();
 
-  ThreadPool::destroy();
-  ZMQContext::destroy();
-  NodeInfoManager::destroy();
-  MulticastSender::destroy();
-  MulticastReceiver::destroy();
-  ServiceManager::destroy();
+  // Destroy in reverse order of initialization, respecting dependencies
+  // SubscriberManager subscribes to NodeInfoManager events, so destroy first
   SubscriberManager::destroy();
+  ServiceManager::destroy();
+  MulticastReceiver::destroy();
+  MulticastSender::destroy();
+  NodeInfoManager::destroy();
+  ZMQContext::destroy();
+  ThreadPool::destroy();
+  // Shutdown logger before destroying singletons to avoid segfault during global dtors
+  Logger::shutdown();
+  std::cout << "[ZeroLanComNode] Shutdown complete." << std::endl;
 }
 
 bool ZeroLanComNode::isRunning() const
