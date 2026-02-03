@@ -103,6 +103,11 @@ configure_file(
 add_subdirectory(examples)
 
 # ----------------------------
+# Add CLI tools
+# ----------------------------
+add_subdirectory(tools)
+
+# ----------------------------
 # Add tests (optional)
 # ----------------------------
 option(BUILD_TESTS "Build test suite" ON)

@@ -136,6 +136,18 @@ const SocketInfo *NodeInfoManager::getServiceInfo(const std::string &serviceName
   return nullptr;
 }
 
+std::vector<NodeInfo> NodeInfoManager::getAllNodes() const
+{
+  std::shared_lock lock(data_mutex_);
+  std::vector<NodeInfo> result;
+  result.reserve(nodes_info_.size());
+  for (const auto &[id, node] : nodes_info_)
+  {
+    result.push_back(node);
+  }
+  return result;
+}
+
 void NodeInfoManager::checkHeartbeats()
 {
   std::unique_lock lock(data_mutex_);

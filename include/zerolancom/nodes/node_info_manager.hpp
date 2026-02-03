@@ -55,6 +55,7 @@ public:
 
   std::vector<SocketInfo> getPublisherInfo(const std::string &topicName) const;
   const SocketInfo *getServiceInfo(const std::string &serviceName) const;
+  std::vector<NodeInfo> getAllNodes() const;
 
   void checkHeartbeats();
   void processHeartbeat(const HeartbeatMessage &heartbeat, const std::string &nodeIP);
