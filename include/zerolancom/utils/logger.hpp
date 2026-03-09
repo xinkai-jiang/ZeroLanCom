@@ -45,6 +45,7 @@ private:
 // =======================
 
 void trace(const std::string &msg);
+void debug(const std::string &msg);
 void info(const std::string &msg);
 void warn(const std::string &msg);
 void error(const std::string &msg);
@@ -59,6 +60,13 @@ inline void trace(fmt::format_string<Args...> fmt, Args &&...args)
 {
   if (Logger::isInitialized())
     spdlog::trace(fmt, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+inline void debug(fmt::format_string<Args...> fmt, Args &&...args)
+{
+  if (Logger::isInitialized())
+    spdlog::debug(fmt, std::forward<Args>(args)...);
 }
 
 template <typename... Args>

@@ -20,7 +20,8 @@ namespace zlc
 
 void init(const std::string &node_name, const std::string &ip_address,
           const std::string &group = "224.0.0.1", int groupPort = 7720,
-          const std::string &groupName = "zlc_default_group_name");
+          const std::string &groupName = "zlc_default_group_name",
+          LogLevel loglevel = LogLevel::INFO);
 void shutdown();
 void sleep(int ms);
 void spin();

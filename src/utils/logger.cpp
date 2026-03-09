@@ -98,6 +98,12 @@ void trace(const std::string &msg)
     spdlog::trace(msg);
 }
 
+void debug(const std::string &msg)
+{
+  if (Logger::isInitialized())
+    spdlog::debug(msg);
+}
+
 void info(const std::string &msg)
 {
   if (Logger::isInitialized())
@@ -118,7 +124,8 @@ void error(const std::string &msg)
 
 void fatal(const std::string &msg)
 {
-  spdlog::critical(msg);
+  if (Logger::isInitialized())
+    spdlog::critical(msg);
 }
 
 } // namespace zlc
